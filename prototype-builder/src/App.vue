@@ -5,7 +5,7 @@
       <div class="header-actions">
         <el-button @click="undo" :disabled="!canUndo">撤销</el-button>
         <el-button @click="redo" :disabled="!canRedo">重做</el-button>
-        <el-button type="primary" @click="exportDialogVisible = true">导出</el-button>
+        <el-button type="primary" @click="exportDialogVisible = true">导出-test</el-button>
       </div>
     </header>
     <div class="main">

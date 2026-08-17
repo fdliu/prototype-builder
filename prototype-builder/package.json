@@ -5,7 +5,8 @@
     "scripts": {
       "dev": "vite --host 0.0.0.0 --port 5173",
       "build": "vue-tsc && vite build",
-      "preview": "vite preview --host 0.0.0.0 --port 5173"
+      "preview": "vite preview --host 0.0.0.0 --port 5173",
+      "deploy": "vue-tsc && vite build && cloudbase hosting deploy dist -e prd-sh-d7grikni5c100872b"
     },
     "dependencies": {
       "element-plus": "^2.7.0",
