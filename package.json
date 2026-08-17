@@ -1,0 +1,23 @@
+{
+    "name": "prototype-builder",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+      "dev": "vite --host 0.0.0.0 --port 5173",
+      "build": "vue-tsc && vite build",
+      "preview": "vite preview --host 0.0.0.0 --port 5173"
+    },
+    "dependencies": {
+      "element-plus": "^2.7.0",
+      "pinia": "^2.1.7",
+      "sortablejs": "^1.15.2",
+      "vue": "^3.4.21"
+    },
+    "devDependencies": {
+      "@types/sortablejs": "^1.15.8",
+      "@vitejs/plugin-vue": "^5.0.4",
+      "typescript": "^5.4.5",
+      "vite": "^5.2.0",
+      "vue-tsc": "^2.0.6"
+    }
+  }
