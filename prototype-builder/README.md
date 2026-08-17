@@ -8,6 +8,11 @@
 npm install
 npm run dev
 
+## vcp_2yLwCQ2ePFcLyRnKgyB2uGJZso6K6qimmMdyLb2fINRZwWpEcj24SOFW
+## 环境ID: prd-sh-d7grikni5c100872b
+## 打开 CloudBase 控制台：https://console.cloud.tencent.com/tcb
+
+##--------------------------------------------------------------------------##
 ## 左侧组件列表拖拽到画布
 
 ## 画布内拖拽排序
