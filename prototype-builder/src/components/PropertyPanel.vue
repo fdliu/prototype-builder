@@ -18,8 +18,15 @@
           :model-value="selectedComponent.props[field.key]"
           @update:model-value="updateProp(field.key, $event)"
         />
+        <el-input-number
+          v-else-if="field.type === 'number'"
+          :model-value="selectedComponent.props[field.key]"
+          @update:model-value="updateProp(field.key, $event)"
+          :min="1"
+          :max="24"
+        />
         <el-input
-          v-else-if="field.type === 'textarea'"
+            v-else-if="field.type === 'textarea'"
           type="textarea"
           :model-value="selectedComponent.props[field.key]"
           @update:model-value="updateProp(field.key, $event)"
@@ -57,8 +64,21 @@ const currentPropsConfig = computed(() => {
 
 function updateProp(key: string, value: any) {
   if (selectedComponent.value) {
-    // 对于数组或逗号分隔的字段，简单处理：直接存字符串，渲染器自行解析
-    store.updateProps(selectedComponent.value.id, { [key]: value });
+    const updates: Record<string, any> = { [key]: value };
+    
+    // 当修改 columns 时，自动更新 colSpans
+    if (key === 'columns' && selectedComponent.value.type === 'grid') {
+      const cols = Number(value) || 2;
+      const span = Math.floor(24 / cols);
+      const remainder = 24 - span * cols;
+      const newSpans = Array(cols).fill(span);
+      if (remainder > 0) {
+        newSpans[cols - 1] += remainder;
+      }
+      updates.colSpans = newSpans;
+    }
+    
+    store.updateProps(selectedComponent.value.id, updates);
   }
 }
 </script>

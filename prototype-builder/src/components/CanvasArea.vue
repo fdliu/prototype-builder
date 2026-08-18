@@ -5,29 +5,19 @@
     @drop="onDrop"
     ref="canvasRef"
   >
-    <div
-      v-for="(comp, index) in store.components"
-      :key="comp.id"
-      class="canvas-item"
-      :class="{ selected: store.selectedId === comp.id }"
-      @click.stop="store.select(comp.id)"
-    >
-      <div class="item-actions" v-if="store.selectedId === comp.id">
-        <button @click.stop="store.copyComponent(comp.id)">复制</button>
-        <button @click.stop="store.removeComponent(comp.id)">删除</button>
-      </div>
-      <component :is="getRenderer(comp.type)" :props="comp.props" />
-    </div>
     <div v-if="store.components.length === 0" class="empty-tip">
       从左侧拖拽组件到这里
     </div>
+    <template v-for="comp in store.components" :key="comp.id">
+      <CanvasItem :component="comp" :depth="0" />
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useEditorStore } from '../stores/editor';
-import { getRenderer } from './renderer';
+import CanvasItem from './CanvasItem.vue';
 import Sortable from 'sortablejs';
 
 const store = useEditorStore();
@@ -36,18 +26,32 @@ const canvasRef = ref<HTMLElement | null>(null);
 function onDrop(e: DragEvent) {
   const type = e.dataTransfer?.getData('componentType');
   if (!type) return;
+  
   const defaultProps = getDefaultProps(type);
-  const newComp = {
+  const newComp: any = {
     id: generateId(),
     type,
     props: { ...defaultProps },
   };
+  
+  if (type === 'layout') {
+    newComp.slots = { header: [], sidebar: [], content: [], footer: [] };
+  }
+  if (type === 'grid') {
+    const cols = Number(defaultProps.columns) || 2;
+    newComp.slots = {};
+    for (let i = 0; i < cols; i++) {
+      newComp.slots[`col_${i}`] = [];
+    }
+  }
+  
   store.addComponent(newComp);
 }
 
 function getDefaultProps(type: string): Record<string, any> {
-  // 从配置中获取默认属性，可简化：直接 hardcode 或导入 config
   const configs: Record<string, any> = {
+    layout: { header: '后台管理系统', sidebar: 'true', sidebarWidth: '200px', content: '内容区域' },
+    grid: { columns: 2, gutter: 10, colSpans: [12, 12] },
     button: { text: '按钮', type: 'primary' },
     input: { placeholder: '请输入', label: '输入框' },
     table: { columns: ['姓名', '年龄'], data: [['张三', 28], ['李四', 32]] },
@@ -66,6 +70,7 @@ onMounted(() => {
   if (canvasRef.value) {
     Sortable.create(canvasRef.value, {
       animation: 150,
+      handle: '.drag-handle',
       onEnd: (evt) => {
         if (evt.oldIndex !== undefined && evt.newIndex !== undefined) {
           store.reorder(evt.oldIndex, evt.newIndex);
@@ -83,35 +88,6 @@ onMounted(() => {
   background: #fafafa;
   overflow-y: auto;
   position: relative;
-}
-.canvas-item {
-  position: relative;
-  padding: 8px;
-  margin-bottom: 10px;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.canvas-item.selected {
-  border-color: #409eff;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
-}
-.item-actions {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  z-index: 10;
-  display: flex;
-  gap: 5px;
-}
-.item-actions button {
-  font-size: 12px;
-  padding: 2px 8px;
-  border: 1px solid #ccc;
-  border-radius: 3px;
-  background: white;
-  cursor: pointer;
 }
 .empty-tip {
   color: #999;

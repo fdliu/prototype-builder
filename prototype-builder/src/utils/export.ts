@@ -3,6 +3,36 @@ import type { ComponentInstance } from '../types';
 function componentToHTML(comp: ComponentInstance): string {
   const p = comp.props;
   switch (comp.type) {
+    case 'layout':
+      const sidebarWidth = p.sidebarWidth || '200px';
+      const showSidebar = p.sidebar === 'true' || p.sidebar === true;
+      const sidebarHTML = showSidebar
+        ? `<div class="layout-sidebar" style="width:${sidebarWidth};">
+             <div class="sidebar-item">菜单项 1</div>
+             <div class="sidebar-item">菜单项 2</div>
+             <div class="sidebar-item">菜单项 3</div>
+           </div>`
+        : '';
+      return `<div class="layout">
+        <div class="layout-header">${p.header}</div>
+        <div class="layout-body">
+          ${sidebarHTML}
+          <div class="layout-content">${p.content}</div>
+        </div>
+      </div>`;
+    case 'grid': {
+      const gutter = Number(p.gutter) || 0;
+      const colSpans = getColSpans(p);
+      let gridHTML = `<div class="el-row" style="display:flex; flex-wrap:wrap; gap:${gutter}px;">`;
+      colSpans.forEach((span: number, index: number) => {
+        const width = (span / 24) * 100;
+        gridHTML += `<div class="el-col" style="flex: 0 0 calc(${width}% - ${gutter}px); background:#f5f7fa; border:1px dashed #dcdfe6; border-radius:4px; padding:20px; text-align:center; color:#909399; min-height:60px;">
+          列 ${index + 1}
+        </div>`;
+      });
+      gridHTML += '</div>';
+      return gridHTML;
+    }
     case 'button':
       return `<button class="btn btn-${p.type}">${p.text}</button>`;
     case 'input':
@@ -48,15 +78,37 @@ function componentToHTML(comp: ComponentInstance): string {
       return '<div></div>';
   }
 }
-
+function getColSpans(p: Record<string, any>): number[] {
+  const cols = Number(p.columns) || 2;
+  const spans = p.colSpans;
+  
+  let spanArray: number[] = [];
+  
+  if (Array.isArray(spans)) {
+    spanArray = spans.map(Number);
+  } else if (typeof spans === 'string' && spans.trim()) {
+    spanArray = spans.split(',').map((s: string) => Number(s.trim()) || 12);
+  }
+  
+  // 联动处理
+  if (spanArray.length !== cols) {
+    const span = Math.floor(24 / cols);
+    spanArray = Array(cols).fill(span);
+    const remainder = 24 - span * cols;
+    if (remainder > 0) {
+      spanArray[cols - 1] += remainder;
+    }
+  }
+  
+  return spanArray;
+}
 export function exportJSON(components: ComponentInstance[]) {
   const data = JSON.stringify(components, null, 2);
   downloadFile('prototype.json', data, 'application/json');
 }
 
 export function exportHTML(components: ComponentInstance[]) {
-  console.log("components-------",components);
-  const bodyContent = components?.map(componentToHTML).join('\n');
+  const bodyContent = components.map(componentToHTML).join('\n');
   const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -76,6 +128,12 @@ export function exportHTML(components: ComponentInstance[]) {
     .table th, .table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
     .card { border: 1px solid #ddd; border-radius: 4px; padding: 16px; margin-bottom: 12px; }
     .card-title { font-weight: bold; margin-bottom: 8px; }
+    .layout { border: 1px solid #ddd; border-radius: 4px; overflow: hidden; margin-bottom: 12px; }
+    .layout-header { background: #409eff; color: white; padding: 12px 16px; font-weight: bold; }
+    .layout-body { display: flex; min-height: 200px; }
+    .layout-sidebar { background: #f5f5f5; border-right: 1px solid #ddd; padding: 8px 0; flex-shrink: 0; }
+    .sidebar-item { padding: 8px 16px; font-size: 14px; }
+    .layout-content { flex: 1; padding: 16px; }
     .dialog-trigger { position: relative; }
     .dialog-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; }
     .dialog-box { background: white; padding: 20px; border-radius: 4px; min-width: 300px; }

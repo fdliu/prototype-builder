@@ -2,6 +2,34 @@ import type { ComponentConfig } from '../types';
 
 export const componentList: ComponentConfig[] = [
   {
+    type: 'layout',
+    name: '布局容器',
+    defaultProps: {
+      header: '顶部区域',
+      sidebarWidth: '200px',
+      showSidebar: 'true',
+    },
+    propsConfig: [
+      { key: 'header', label: '顶部标题', type: 'input' },
+      { key: 'showSidebar', label: '显示侧边栏', type: 'select', options: ['true', 'false'] },
+      { key: 'sidebarWidth', label: '侧边栏宽度', type: 'input' },
+    ],
+  },
+  {
+    type: 'grid',
+    name: '栅格布局',
+    defaultProps: {
+      columns: 2,
+      gutter: 10,
+      colSpans: [12, 12],
+    },
+    propsConfig: [
+      { key: 'columns', label: '列数', type: 'number' },
+      { key: 'gutter', label: '间距', type: 'number' },
+      { key: 'colSpans', label: '每列跨度（逗号分隔）', type: 'textarea' },
+    ],
+  },
+  {
     type: 'button',
     name: '按钮',
     defaultProps: { text: '按钮', type: 'primary' },
