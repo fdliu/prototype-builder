@@ -9,6 +9,7 @@ export const useEditorStore = defineStore('editor', {
   state: () => ({
     components: [] as ComponentInstance[],
     selectedId: null as string | null,
+    multiSelectedIds: [] as string[],
     history: [] as ComponentInstance[][],
     future: [] as ComponentInstance[][],
   }),
@@ -35,6 +36,7 @@ export const useEditorStore = defineStore('editor', {
       }
       return findComponent(state.components);
     },
+    isMultiSelect: (state) => state.multiSelectedIds.length > 0,
   },
   actions: {
     addComponent(comp: ComponentInstance, parentId?: string, slotName?: string) {
@@ -56,13 +58,67 @@ export const useEditorStore = defineStore('editor', {
         this.components.push(comp);
       }
       this.selectedId = comp.id;
+      this.multiSelectedIds = [];
       this.saveToLocal();
     },
-    select(id: string) { this.selectedId = id; },
+    select(id: string) {
+      this.selectedId = id;
+      this.multiSelectedIds = []; // 单选时清空多选
+    },
+    setMultiSelect(ids: string[]) {
+      this.multiSelectedIds = ids;
+      // 如果有多个，清除单选高亮
+      if (ids.length > 1) {
+        this.selectedId = null;
+      } else if (ids.length === 1) {
+        this.selectedId = ids[0];
+      }
+    },
+    clearMultiSelect() {
+      this.multiSelectedIds = [];
+    },
     removeComponent(id: string) {
       this.commit();
       this.removeComponentFromParent(id);
       if (this.selectedId === id) this.selectedId = null;
+      this.multiSelectedIds = this.multiSelectedIds.filter(mid => mid !== id);
+      this.saveToLocal();
+    },
+    batchDelete() {
+      if (this.multiSelectedIds.length === 0) return;
+      this.commit();
+      this.multiSelectedIds.forEach(id => {
+        this.removeComponentFromParent(id);
+        if (this.selectedId === id) this.selectedId = null;
+      });
+      this.multiSelectedIds = [];
+      this.saveToLocal();
+    },
+    batchCopy() {
+      if (this.multiSelectedIds.length === 0) return;
+      const newComps: ComponentInstance[] = [];
+      this.multiSelectedIds.forEach(id => {
+        const comp = this.findComponentById(id);
+        if (comp) {
+          const newComp: ComponentInstance = JSON.parse(JSON.stringify(comp));
+          const regen = (c: ComponentInstance) => {
+            c.id = generateId();
+            if (c.children) c.children.forEach(regen);
+            if (c.slots) {
+              for (const s of Object.keys(c.slots)) {
+                c.slots[s]?.forEach(regen);
+              }
+            }
+          };
+          regen(newComp);
+          newComps.push(newComp);
+        }
+      });
+      this.commit();
+      // 追加到根级
+      this.components.push(...newComps);
+      this.multiSelectedIds = newComps.map(c => c.id);
+      this.selectedId = this.multiSelectedIds[0] || null;
       this.saveToLocal();
     },
     copyComponent(id: string) {
@@ -82,6 +138,7 @@ export const useEditorStore = defineStore('editor', {
         this.commit();
         this.components.push(newComp);
         this.selectedId = newComp.id;
+        this.multiSelectedIds = [];
         this.saveToLocal();
       }
     },
@@ -109,6 +166,7 @@ export const useEditorStore = defineStore('editor', {
       this.removeComponentFromParent(id);
       this.components.push(comp);
       this.selectedId = id;
+      this.multiSelectedIds = [];
       this.saveToLocal();
     },
     moveComponentToSlot(sourceId: string, targetId: string, slotName: string) {
@@ -123,6 +181,39 @@ export const useEditorStore = defineStore('editor', {
       if (!target.slots[slotName]) target.slots[slotName] = [];
       target.slots[slotName].push(source);
       this.selectedId = source.id;
+      this.multiSelectedIds = [];
+      this.saveToLocal();
+    },
+    moveComponentBefore(sourceId: string, targetId: string) {
+      this.commit();
+      const source = this.findComponentById(sourceId);
+      const target = this.findComponentById(targetId);
+      if (!source || !target) return;
+      this.removeComponentFromParent(sourceId);
+      const targetIndex = this.components.findIndex(c => c.id === targetId);
+      if (targetIndex !== -1) {
+        this.components.splice(targetIndex, 0, source);
+      } else {
+        this.components.push(source);
+      }
+      this.selectedId = source.id;
+      this.multiSelectedIds = [];
+      this.saveToLocal();
+    },
+    moveComponentAfter(sourceId: string, targetId: string) {
+      this.commit();
+      const source = this.findComponentById(sourceId);
+      const target = this.findComponentById(targetId);
+      if (!source || !target) return;
+      this.removeComponentFromParent(sourceId);
+      const targetIndex = this.components.findIndex(c => c.id === targetId);
+      if (targetIndex !== -1) {
+        this.components.splice(targetIndex + 1, 0, source);
+      } else {
+        this.components.push(source);
+      }
+      this.selectedId = source.id;
+      this.multiSelectedIds = [];
       this.saveToLocal();
     },
     swapComponents(id1: string, id2: string) {
@@ -140,6 +231,7 @@ export const useEditorStore = defineStore('editor', {
       if (idx !== -1) {
         this.components.splice(idx + 1, 0, newComp);
         this.selectedId = newComp.id;
+        this.multiSelectedIds = [];
         this.saveToLocal();
       }
     },
@@ -228,6 +320,8 @@ export const useEditorStore = defineStore('editor', {
       if (this.history.length > 0) {
         this.future.push(JSON.parse(JSON.stringify(this.components)));
         this.components = this.history.pop()!;
+        this.selectedId = null;
+        this.multiSelectedIds = [];
         this.saveToLocal();
       }
     },
@@ -235,6 +329,8 @@ export const useEditorStore = defineStore('editor', {
       if (this.future.length > 0) {
         this.history.push(JSON.parse(JSON.stringify(this.components)));
         this.components = this.future.pop()!;
+        this.selectedId = null;
+        this.multiSelectedIds = [];
         this.saveToLocal();
       }
     },
@@ -246,36 +342,6 @@ export const useEditorStore = defineStore('editor', {
       if (data) {
         try { this.components = JSON.parse(data); } catch (e) {}
       }
-    },
-    moveComponentBefore(sourceId: string, targetId: string) {
-      this.commit();
-      const source = this.findComponentById(sourceId);
-      const target = this.findComponentById(targetId);
-      if (!source || !target) return;
-      this.removeComponentFromParent(sourceId);
-      const targetIndex = this.components.findIndex(c => c.id === targetId);
-      if (targetIndex !== -1) {
-        this.components.splice(targetIndex, 0, source);
-      } else {
-        this.components.push(source);
-      }
-      this.selectedId = source.id;
-      this.saveToLocal();
-    },
-    moveComponentAfter(sourceId: string, targetId: string) {
-      this.commit();
-      const source = this.findComponentById(sourceId);
-      const target = this.findComponentById(targetId);
-      if (!source || !target) return;
-      this.removeComponentFromParent(sourceId);
-      const targetIndex = this.components.findIndex(c => c.id === targetId);
-      if (targetIndex !== -1) {
-        this.components.splice(targetIndex + 1, 0, source);
-      } else {
-        this.components.push(source);
-      }
-      this.selectedId = source.id;
-      this.saveToLocal();
     },
   },
 });

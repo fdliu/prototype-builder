@@ -26,7 +26,8 @@ function onDragStart(e: DragEvent, type: string) {
 
 <style scoped>
 .component-list {
-  width: 200px;
+  width: 100%;
+  box-sizing: border-box;
   background: #f5f5f5;
   padding: 15px;
   border-right: 1px solid #e0e0e0;

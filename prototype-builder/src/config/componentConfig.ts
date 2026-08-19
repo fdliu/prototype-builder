@@ -29,7 +29,7 @@ const defaultCommonStyle: Record<string, string> = {
 };
 // 按钮默认样式
 const defaultBtnCommonStyle: Record<string, string> = {
-  width: '200px',
+  width: '',
   height: '',
   paddingTop: '5',
   paddingRight: '5',
@@ -42,7 +42,7 @@ const defaultBtnCommonStyle: Record<string, string> = {
 };
 // 输入框默认样式
 const defaultInputCommonStyle: Record<string, string> = {
-  width: '500px',
+  width: '',
   height: '',
   paddingTop: '5',
   paddingRight: '5',
@@ -88,6 +88,26 @@ export const componentList: ComponentConfig[] = [
     styleConfig: commonStyleConfig,
   },
   {
+    type: 'text',
+    name: '文本',
+    defaultProps: {
+      content: '这是一段文本',
+      fontSize: 14,
+      color: '#333333',
+      textAlign: 'left',
+      fontWeight: 'normal',
+    },
+    defaultStyle: { ...defaultBtnCommonStyle },
+    propsConfig: [
+      { key: 'content', label: '文本内容', type: 'textarea' },
+      { key: 'fontSize', label: '字体大小(px)', type: 'number' },
+      { key: 'color', label: '文字颜色', type: 'input' },
+      { key: 'textAlign', label: '对齐方式', type: 'select', options: ['left', 'center', 'right'] },
+      { key: 'fontWeight', label: '字重', type: 'select', options: ['normal', 'bold'] },
+    ],
+    styleConfig: commonStyleConfig,
+  },
+  {
     type: 'button',
     name: '按钮',
     defaultProps: { text: '按钮', type: 'primary' },
@@ -104,13 +124,35 @@ export const componentList: ComponentConfig[] = [
     defaultProps: { 
       placeholder: '请输入', 
       label: '输入框',
-      labelPosition: 'left',  // 新增：label 位置
+      labelPosition: 'left',
+      labelWidth: '',          // 新增，空字符串表示自适应
     },
-    defaultStyle: { ...defaultInputCommonStyle },
+    defaultStyle: { ...defaultCommonStyle },
     propsConfig: [
       { key: 'label', label: '标签', type: 'input' },
       { key: 'labelPosition', label: '标签位置', type: 'select', options: ['left', 'top'] },
+      { key: 'labelWidth', label: '标签宽度(px)', type: 'input' },   // 新增
       { key: 'placeholder', label: '占位提示', type: 'input' },
+    ],
+    styleConfig: commonStyleConfig,
+  },
+  {
+    type: 'select',
+    name: '下拉框',
+    defaultProps: {
+      label: '下拉框',
+      placeholder: '请选择',
+      options: ['选项1', '选项2', '选项3'],
+      labelPosition: 'left',
+      labelWidth: '',          // 新增
+    },
+    defaultStyle: { ...defaultCommonStyle },
+    propsConfig: [
+      { key: 'label', label: '标签', type: 'input' },
+      { key: 'labelPosition', label: '标签位置', type: 'select', options: ['left', 'top'] },
+      { key: 'labelWidth', label: '标签宽度(px)', type: 'input' },   // 新增
+      { key: 'placeholder', label: '占位提示', type: 'input' },
+      { key: 'options', label: '选项（逗号分隔）', type: 'textarea' },
     ],
     styleConfig: commonStyleConfig,
   },
@@ -135,11 +177,11 @@ export const componentList: ComponentConfig[] = [
     name: '表单',
     defaultProps: {
       fields: ['姓名', '邮箱'],
+      fieldsConfig: '',
+      labelPosition: 'left',      // 新增：标签位置
     },
     defaultStyle: { ...defaultCommonStyle },
-    propsConfig: [
-      { key: 'fields', label: '字段（逗号分隔）', type: 'textarea' },
-    ],
+    propsConfig: [],              // 保持为空，由高级界面接管
     styleConfig: commonStyleConfig,
   },
   {
@@ -167,6 +209,22 @@ export const componentList: ComponentConfig[] = [
     propsConfig: [
       { key: 'title', label: '弹窗标题', type: 'input' },
       { key: 'triggerText', label: '触发按钮文字', type: 'input' },
+    ],
+    styleConfig: commonStyleConfig,
+  },
+  {
+    type: 'icon',
+    name: '图标',
+    defaultProps: {
+      iconName: 'HomeFilled',
+      color: '#333333',
+      size: 24,
+    },
+    defaultStyle: { ...defaultBtnCommonStyle },
+    propsConfig: [
+      { key: 'iconName', label: '图标名称', type: 'input' },
+      { key: 'color', label: '颜色', type: 'input' },
+      { key: 'size', label: '大小(px)', type: 'number' },
     ],
     styleConfig: commonStyleConfig,
   },

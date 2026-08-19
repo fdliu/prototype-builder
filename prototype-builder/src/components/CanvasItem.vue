@@ -1,8 +1,12 @@
 <template>
-  <div class="canvas-item-wrapper">
+  <div class="canvas-item-wrapper" :class="{ 'wrapper-container': isLayout || isGrid }">
     <div
       class="canvas-item"
-      :class="{ selected: store.selectedId === component.id }"
+      :class="{
+        selected: store.selectedId === component.id || store.multiSelectedIds.includes(component.id),
+        'is-container': isLayout || isGrid,
+        'full-width': isFullWidth
+      }"
       @click.stop="store.select(component.id)"
       :style="componentStyle"
       draggable="true"
@@ -11,12 +15,12 @@
       @dragover.prevent.stop="onDragOver"
       @drop.prevent.stop="onDropToSelf"
     >
-      <div class="item-toolbar" v-if="store.selectedId === component.id">
-        <span class="drag-handle" @mousedown.stop>⋮⋮</span>
-        <span class="item-type">{{ component.type }}</span>
-        <button @click.stop="store.copyComponent(component.id)">复制</button>
-        <button @click.stop="store.removeComponent(component.id)">删除</button>
-      </div>
+    <div class="item-toolbar" v-if="store.selectedId === component.id">
+      <span class="drag-handle" @mousedown.stop>⋮⋮</span>
+      <span class="item-type">{{ component.type }}</span>
+      <button @click.stop="store.copyComponent(component.id)">复制</button>
+      <button @click.stop="store.removeComponent(component.id)">删除</button>
+    </div>
 
       <!-- Layout 容器 -->
       <div v-if="isLayout" class="layout-editor">
@@ -140,6 +144,12 @@ const componentStyle = computed(() => {
   return cssStyle;
 });
 
+const isFullWidth = computed(() => {
+  if (isLayout.value || isGrid.value) return true;
+  const width = props.component.style?.width;
+  return width === '100%' || width === '100%' || width === '100%';
+});
+
 function getSlotComponents(slotName: string): ComponentInstance[] {
   if (!props.component.slots) return [];
   return props.component.slots[slotName] || [];
@@ -234,9 +244,22 @@ function generateId(): string {
 </script>
 
 <style scoped>
-.canvas-item-wrapper { position: relative; }
+.canvas-item-wrapper {
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
+  vertical-align: top;
+}
+.canvas-item-wrapper.wrapper-container {
+  display: block;
+  width: 100%;
+}
+
 .canvas-item {
   position: relative;
+  display: block;
+  width: fit-content;
+  max-width: 100%;
   padding: 8px;
   margin-bottom: 10px;
   background: #fff;
@@ -245,12 +268,80 @@ function generateId(): string {
   cursor: pointer;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
+.canvas-item.is-container {
+  width: 100%;
+}
+
+/* 工具栏绝对定位，不占用布局空间 */
+.item-toolbar {
+  position: absolute;
+  top: 50%;
+  right: -50px;
+  transform: translateY(-50%);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 2px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.item-toolbar button {
+  font-size: 12px;
+  padding: 1px 6px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  background: white;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.drag-handle {
+  cursor: grab;
+  font-size: 14px;
+  color: #999;
+  user-select: none;
+  padding: 0 2px;
+}
+
+.item-type {
+  display: none; /* 隐藏组件类型文字，保持工具栏简洁 */
+}
+
+/* 拖拽手柄样式 */
+.drag-handle {
+  cursor: grab;
+  font-size: 14px;
+  color: #999;
+  user-select: none;
+  padding: 0 2px;
+}
+
+.item-toolbar button {
+  font-size: 12px;
+  padding: 1px 6px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  background: white;
+  cursor: pointer;
+}
 .canvas-item:hover { border-color: #bbb; }
 .canvas-item.selected {
   border-color: #409eff;
   box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
 }
 .canvas-item.dragging { opacity: 0.5; }
+/* 全宽组件工具栏移到右上角 */
+.canvas-item.full-width .item-toolbar {
+  top: 4px;
+  right: 4px;
+  transform: none;
+  flex-direction: row;      /* 可选：水平排列，更紧凑 */
+  align-items: center;
+}
 .item-toolbar {
   display: flex;
   align-items: center;
