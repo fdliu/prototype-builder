@@ -14,26 +14,17 @@ import { exportJSON, exportHTML } from '../utils/export';
 
 const props = defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{ (e: 'update:modelValue', value: boolean): void }>();
-
 const store = useEditorStore();
+
 const dialogVisible = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val),
 });
 
-function handleExportJSON() {
-  exportJSON(store.components);
-}
-
-function handleExportHTML() {
-  exportHTML(store.components);
-}
+function handleExportJSON() { exportJSON(store.components); }
+function handleExportHTML() { exportHTML(store.components); }
 </script>
 
 <style scoped>
-.export-buttons {
-  display: flex;
-  justify-content: space-around;
-  padding: 20px 0;
-}
+.export-buttons { display: flex; justify-content: space-around; padding: 20px 0; }
 </style>

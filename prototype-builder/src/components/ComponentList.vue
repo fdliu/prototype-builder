@@ -46,7 +46,5 @@ function onDragStart(e: DragEvent, type: string) {
   background: #ecf5ff;
   border-color: #409eff;
 }
-.component-item:active {
-  cursor: grabbing;
-}
+.component-item:active { cursor: grabbing; }
 </style>

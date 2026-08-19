@@ -1,4 +1,58 @@
-import type { ComponentConfig } from '../types';
+import type { ComponentConfig, StyleFieldConfig } from '../types';
+
+// 通用样式配置（所有组件共享）
+const commonStyleConfig: StyleFieldConfig[] = [
+  { key: 'width', label: '宽度(px/%)', type: 'input' },
+  { key: 'height', label: '高度(px/%)', type: 'input' },
+  { key: 'paddingTop', label: '上内边距(px)', type: 'number' },
+  { key: 'paddingRight', label: '右内边距(px)', type: 'number' },
+  { key: 'paddingBottom', label: '下内边距(px)', type: 'number' },
+  { key: 'paddingLeft', label: '左内边距(px)', type: 'number' },
+  { key: 'marginTop', label: '上外边距(px)', type: 'number' },
+  { key: 'marginRight', label: '右外边距(px)', type: 'number' },
+  { key: 'marginBottom', label: '下外边距(px)', type: 'number' },
+  { key: 'marginLeft', label: '左外边距(px)', type: 'number' },
+];
+
+// 默认样式
+const defaultCommonStyle: Record<string, string> = {
+  width: '',
+  height: '',
+  paddingTop: '5',
+  paddingRight: '5',
+  paddingBottom: '5',
+  paddingLeft: '5',
+  marginTop: '0',
+  marginRight: '0',
+  marginBottom: '10',
+  marginLeft: '0',
+};
+// 按钮默认样式
+const defaultBtnCommonStyle: Record<string, string> = {
+  width: '200px',
+  height: '',
+  paddingTop: '5',
+  paddingRight: '5',
+  paddingBottom: '5',
+  paddingLeft: '5',
+  marginTop: '0',
+  marginRight: '0',
+  marginBottom: '5',
+  marginLeft: '0',
+};
+// 输入框默认样式
+const defaultInputCommonStyle: Record<string, string> = {
+  width: '500px',
+  height: '',
+  paddingTop: '5',
+  paddingRight: '5',
+  paddingBottom: '5',
+  paddingLeft: '5',
+  marginTop: '0',
+  marginRight: '0',
+  marginBottom: '5',
+  marginLeft: '0',
+};
 
 export const componentList: ComponentConfig[] = [
   {
@@ -6,14 +60,16 @@ export const componentList: ComponentConfig[] = [
     name: '布局容器',
     defaultProps: {
       header: '顶部区域',
-      sidebarWidth: '200px',
       showSidebar: 'true',
+      sidebarWidth: '200px',
     },
+    defaultStyle: { ...defaultCommonStyle, width: '100%' },
     propsConfig: [
       { key: 'header', label: '顶部标题', type: 'input' },
       { key: 'showSidebar', label: '显示侧边栏', type: 'select', options: ['true', 'false'] },
       { key: 'sidebarWidth', label: '侧边栏宽度', type: 'input' },
     ],
+    styleConfig: commonStyleConfig,
   },
   {
     type: 'grid',
@@ -23,29 +79,40 @@ export const componentList: ComponentConfig[] = [
       gutter: 10,
       colSpans: [12, 12],
     },
+    defaultStyle: { ...defaultCommonStyle, width: '100%' },
     propsConfig: [
       { key: 'columns', label: '列数', type: 'number' },
       { key: 'gutter', label: '间距', type: 'number' },
       { key: 'colSpans', label: '每列跨度（逗号分隔）', type: 'textarea' },
     ],
+    styleConfig: commonStyleConfig,
   },
   {
     type: 'button',
     name: '按钮',
     defaultProps: { text: '按钮', type: 'primary' },
+    defaultStyle: { ...defaultBtnCommonStyle },
     propsConfig: [
       { key: 'text', label: '按钮文字', type: 'input' },
       { key: 'type', label: '按钮类型', type: 'select', options: ['primary', 'success', 'warning', 'danger', 'info'] },
     ],
+    styleConfig: commonStyleConfig,
   },
   {
     type: 'input',
     name: '输入框',
-    defaultProps: { placeholder: '请输入', label: '输入框' },
+    defaultProps: { 
+      placeholder: '请输入', 
+      label: '输入框',
+      labelPosition: 'left',  // 新增：label 位置
+    },
+    defaultStyle: { ...defaultInputCommonStyle },
     propsConfig: [
       { key: 'label', label: '标签', type: 'input' },
+      { key: 'labelPosition', label: '标签位置', type: 'select', options: ['left', 'top'] },
       { key: 'placeholder', label: '占位提示', type: 'input' },
     ],
+    styleConfig: commonStyleConfig,
   },
   {
     type: 'table',
@@ -57,9 +124,11 @@ export const componentList: ComponentConfig[] = [
         ['李四', 32],
       ],
     },
+    defaultStyle: { ...defaultCommonStyle, width: '100%' },
     propsConfig: [
       { key: 'columns', label: '列名（逗号分隔）', type: 'textarea' },
     ],
+    styleConfig: commonStyleConfig,
   },
   {
     type: 'form',
@@ -67,9 +136,11 @@ export const componentList: ComponentConfig[] = [
     defaultProps: {
       fields: ['姓名', '邮箱'],
     },
+    defaultStyle: { ...defaultCommonStyle },
     propsConfig: [
       { key: 'fields', label: '字段（逗号分隔）', type: 'textarea' },
     ],
+    styleConfig: commonStyleConfig,
   },
   {
     type: 'card',
@@ -78,10 +149,12 @@ export const componentList: ComponentConfig[] = [
       title: '卡片标题',
       content: '卡片内容',
     },
+    defaultStyle: { ...defaultCommonStyle },
     propsConfig: [
       { key: 'title', label: '标题', type: 'input' },
       { key: 'content', label: '内容', type: 'textarea' },
     ],
+    styleConfig: commonStyleConfig,
   },
   {
     type: 'dialog',
@@ -90,9 +163,11 @@ export const componentList: ComponentConfig[] = [
       title: '弹窗标题',
       triggerText: '打开弹窗',
     },
+    defaultStyle: { ...defaultCommonStyle },
     propsConfig: [
       { key: 'title', label: '弹窗标题', type: 'input' },
       { key: 'triggerText', label: '触发按钮文字', type: 'input' },
     ],
+    styleConfig: commonStyleConfig,
   },
 ];

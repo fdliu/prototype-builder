@@ -9,7 +9,6 @@ export const useEditorStore = defineStore('editor', {
   state: () => ({
     components: [] as ComponentInstance[],
     selectedId: null as string | null,
-    selectedSlot: null as string | null,
     history: [] as ComponentInstance[][],
     future: [] as ComponentInstance[][],
   }),
@@ -23,8 +22,8 @@ export const useEditorStore = defineStore('editor', {
             if (found) return found;
           }
           if (comp.slots) {
-            for (const slotName of ['header', 'sidebar', 'content', 'footer']) {
-              const slotComps = comp.slots[slotName as keyof typeof comp.slots];
+            for (const slotName of Object.keys(comp.slots)) {
+              const slotComps = comp.slots[slotName];
               if (slotComps) {
                 const found = findComponent(slotComps);
                 if (found) return found;
@@ -47,35 +46,22 @@ export const useEditorStore = defineStore('editor', {
           if (!parent.slots[slotName]) parent.slots[slotName] = [];
           parent.slots[slotName].push(comp);
         }
+      } else if (parentId) {
+        const parent = this.findComponentById(parentId);
+        if (parent) {
+          if (!parent.children) parent.children = [];
+          parent.children.push(comp);
+        }
       } else {
         this.components.push(comp);
       }
       this.selectedId = comp.id;
       this.saveToLocal();
     },
-    select(id: string) {
-      this.selectedId = id;
-    },
+    select(id: string) { this.selectedId = id; },
     removeComponent(id: string) {
       this.commit();
-      const remove = (comps: ComponentInstance[]): boolean => {
-        const index = comps.findIndex(c => c.id === id);
-        if (index !== -1) {
-          comps.splice(index, 1);
-          return true;
-        }
-        for (const comp of comps) {
-          if (comp.children && remove(comp.children)) return true;
-          if (comp.slots) {
-            for (const slotName of ['header', 'sidebar', 'content', 'footer']) {
-              const slotComps = comp.slots[slotName as keyof typeof comp.slots];
-              if (slotComps && remove(slotComps)) return true;
-            }
-          }
-        }
-        return false;
-      };
-      remove(this.components);
+      this.removeComponentFromParent(id);
       if (this.selectedId === id) this.selectedId = null;
       this.saveToLocal();
     },
@@ -83,17 +69,16 @@ export const useEditorStore = defineStore('editor', {
       const comp = this.findComponentById(id);
       if (comp) {
         const newComp: ComponentInstance = JSON.parse(JSON.stringify(comp));
-        const regenerateIds = (c: ComponentInstance) => {
+        const regen = (c: ComponentInstance) => {
           c.id = generateId();
-          if (c.children) c.children.forEach(regenerateIds);
+          if (c.children) c.children.forEach(regen);
           if (c.slots) {
-            for (const slotName of ['header', 'sidebar', 'content', 'footer']) {
-              const slotComps = c.slots[slotName as keyof typeof c.slots];
-              if (slotComps) slotComps.forEach(regenerateIds);
+            for (const s of Object.keys(c.slots)) {
+              c.slots[s]?.forEach(regen);
             }
           }
         };
-        regenerateIds(newComp);
+        regen(newComp);
         this.commit();
         this.components.push(newComp);
         this.selectedId = newComp.id;
@@ -108,11 +93,55 @@ export const useEditorStore = defineStore('editor', {
         this.saveToLocal();
       }
     },
-    reorder(oldIndex: number, newIndex: number) {
+    updateStyle(id: string, style: Record<string, string>) {
+      const comp = this.findComponentById(id);
+      if (comp) {
+        this.commit();
+        comp.style = { ...comp.style, ...style };
+        this.saveToLocal();
+      }
+    },
+    moveComponentToRoot(id: string) {
+      const comp = this.findComponentById(id);
+      if (!comp) return;
+      if (this.components.some(c => c.id === id)) return;
       this.commit();
-      const [moved] = this.components.splice(oldIndex, 1);
-      this.components.splice(newIndex, 0, moved);
+      this.removeComponentFromParent(id);
+      this.components.push(comp);
+      this.selectedId = id;
       this.saveToLocal();
+    },
+    moveComponentToSlot(sourceId: string, targetId: string, slotName: string) {
+      if (sourceId === targetId) return;
+      const source = this.findComponentById(sourceId);
+      const target = this.findComponentById(targetId);
+      if (!source || !target) return;
+      if (this.isDescendant(target, source)) return;
+      this.commit();
+      this.removeComponentFromParent(sourceId);
+      if (!target.slots) target.slots = {};
+      if (!target.slots[slotName]) target.slots[slotName] = [];
+      target.slots[slotName].push(source);
+      this.selectedId = source.id;
+      this.saveToLocal();
+    },
+    swapComponents(id1: string, id2: string) {
+      this.commit();
+      const idx1 = this.components.findIndex(c => c.id === id1);
+      const idx2 = this.components.findIndex(c => c.id === id2);
+      if (idx1 !== -1 && idx2 !== -1) {
+        [this.components[idx1], this.components[idx2]] = [this.components[idx2], this.components[idx1]];
+        this.saveToLocal();
+      }
+    },
+    insertAfter(newComp: ComponentInstance, targetId: string) {
+      this.commit();
+      const idx = this.components.findIndex(c => c.id === targetId);
+      if (idx !== -1) {
+        this.components.splice(idx + 1, 0, newComp);
+        this.selectedId = newComp.id;
+        this.saveToLocal();
+      }
     },
     findComponentById(id: string): ComponentInstance | null {
       const find = (comps: ComponentInstance[]): ComponentInstance | null => {
@@ -123,8 +152,8 @@ export const useEditorStore = defineStore('editor', {
             if (found) return found;
           }
           if (comp.slots) {
-            for (const slotName of Object.keys(comp.slots)) {
-              const slotComps = comp.slots[slotName];
+            for (const s of Object.keys(comp.slots)) {
+              const slotComps = comp.slots[s];
               if (slotComps) {
                 const found = find(slotComps);
                 if (found) return found;
@@ -135,6 +164,61 @@ export const useEditorStore = defineStore('editor', {
         return null;
       };
       return find(this.components);
+    },
+    isDescendant(possibleDescendant: ComponentInstance, ancestor: ComponentInstance): boolean {
+      if (!ancestor.slots) {
+        if (ancestor.children) {
+          for (const child of ancestor.children) {
+            if (child.id === possibleDescendant.id) return true;
+            if (this.isDescendant(possibleDescendant, child)) return true;
+          }
+        }
+        return false;
+      }
+      for (const s of Object.keys(ancestor.slots)) {
+        const slotComps = ancestor.slots[s];
+        if (slotComps) {
+          for (const child of slotComps) {
+            if (child.id === possibleDescendant.id) return true;
+            if (this.isDescendant(possibleDescendant, child)) return true;
+          }
+        }
+      }
+      return false;
+    },
+    removeComponentFromParent(id: string) {
+      const rootIdx = this.components.findIndex(c => c.id === id);
+      if (rootIdx !== -1) {
+        this.components.splice(rootIdx, 1);
+        return;
+      }
+      const removeFromSlots = (comps: ComponentInstance[]): boolean => {
+        for (const comp of comps) {
+          if (comp.slots) {
+            for (const s of Object.keys(comp.slots)) {
+              const slotComps = comp.slots[s];
+              if (slotComps) {
+                const idx = slotComps.findIndex(c => c.id === id);
+                if (idx !== -1) {
+                  slotComps.splice(idx, 1);
+                  return true;
+                }
+                if (removeFromSlots(slotComps)) return true;
+              }
+            }
+          }
+          if (comp.children) {
+            const idx = comp.children.findIndex(c => c.id === id);
+            if (idx !== -1) {
+              comp.children.splice(idx, 1);
+              return true;
+            }
+            if (removeFromSlots(comp.children)) return true;
+          }
+        }
+        return false;
+      };
+      removeFromSlots(this.components);
     },
     commit() {
       this.history.push(JSON.parse(JSON.stringify(this.components)));
@@ -160,12 +244,38 @@ export const useEditorStore = defineStore('editor', {
     loadFromLocal() {
       const data = localStorage.getItem('prototype-builder-data');
       if (data) {
-        try {
-          this.components = JSON.parse(data);
-        } catch (e) {
-          console.error('加载本地数据失败', e);
-        }
+        try { this.components = JSON.parse(data); } catch (e) {}
       }
+    },
+    moveComponentBefore(sourceId: string, targetId: string) {
+      this.commit();
+      const source = this.findComponentById(sourceId);
+      const target = this.findComponentById(targetId);
+      if (!source || !target) return;
+      this.removeComponentFromParent(sourceId);
+      const targetIndex = this.components.findIndex(c => c.id === targetId);
+      if (targetIndex !== -1) {
+        this.components.splice(targetIndex, 0, source);
+      } else {
+        this.components.push(source);
+      }
+      this.selectedId = source.id;
+      this.saveToLocal();
+    },
+    moveComponentAfter(sourceId: string, targetId: string) {
+      this.commit();
+      const source = this.findComponentById(sourceId);
+      const target = this.findComponentById(targetId);
+      if (!source || !target) return;
+      this.removeComponentFromParent(sourceId);
+      const targetIndex = this.components.findIndex(c => c.id === targetId);
+      if (targetIndex !== -1) {
+        this.components.splice(targetIndex + 1, 0, source);
+      } else {
+        this.components.push(source);
+      }
+      this.selectedId = source.id;
+      this.saveToLocal();
     },
   },
 });

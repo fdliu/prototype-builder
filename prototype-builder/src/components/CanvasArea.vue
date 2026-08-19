@@ -1,84 +1,101 @@
 <template>
-  <div
-    class="canvas-area"
-    @dragover.prevent
-    @drop="onDrop"
-    ref="canvasRef"
-  >
+  <div class="canvas-area" @dragover.prevent @drop="onDropToCanvas">
     <div v-if="store.components.length === 0" class="empty-tip">
       从左侧拖拽组件到这里
     </div>
-    <template v-for="comp in store.components" :key="comp.id">
+    <div
+      v-for="comp in store.components"
+      :key="comp.id"
+      class="root-item"
+      :data-id="comp.id"
+    >
       <CanvasItem :component="comp" :depth="0" />
-    </template>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
 import { useEditorStore } from '../stores/editor';
 import CanvasItem from './CanvasItem.vue';
-import Sortable from 'sortablejs';
+import { componentList } from '../config/componentConfig';
 
 const store = useEditorStore();
-const canvasRef = ref<HTMLElement | null>(null);
 
-function onDrop(e: DragEvent) {
-  const type = e.dataTransfer?.getData('componentType');
-  if (!type) return;
-  
-  const defaultProps = getDefaultProps(type);
-  const newComp: any = {
-    id: generateId(),
-    type,
-    props: { ...defaultProps },
-  };
-  
-  if (type === 'layout') {
-    newComp.slots = { header: [], sidebar: [], content: [], footer: [] };
+function onDropToCanvas(e: DragEvent) {
+  const moveId = e.dataTransfer?.getData('moveComponentId');
+  const newType = e.dataTransfer?.getData('componentType');
+
+  if (moveId) {
+    // 根据鼠标坐标插入到合适位置
+    insertComponentAtDropPosition(moveId, e.clientY);
+  } else if (newType) {
+    // 从左侧拖入新组件
+    const defaultProps = getDefaultProps(newType);
+    const defaultStyle = getDefaultStyle(newType);
+    const newComp: any = {
+      id: generateId(),
+      type: newType,
+      props: { ...defaultProps },
+      style: { ...defaultStyle },
+    };
+    if (newType === 'layout') {
+      newComp.slots = { header: [], sidebar: [], content: [], footer: [] };
+    }
+    if (newType === 'grid') {
+      const cols = Number(defaultProps.columns) || 2;
+      newComp.slots = {};
+      for (let i = 0; i < cols; i++) newComp.slots[`col_${i}`] = [];
+    }
+    store.addComponent(newComp);
   }
-  if (type === 'grid') {
-    const cols = Number(defaultProps.columns) || 2;
-    newComp.slots = {};
-    for (let i = 0; i < cols; i++) {
-      newComp.slots[`col_${i}`] = [];
+}
+
+function insertComponentAtDropPosition(moveId: string, clientY: number) {
+  const rootItems = document.querySelectorAll('.root-item');
+  if (rootItems.length === 0) return;
+
+  // 获取所有根级组件的 DOM 矩形
+  const rects: { id: string; top: number; bottom: number }[] = [];
+  rootItems.forEach((el) => {
+    const rect = el.getBoundingClientRect();
+    rects.push({
+      id: (el as HTMLElement).dataset.id || '',
+      top: rect.top,
+      bottom: rect.bottom,
+    });
+  });
+
+  // 如果拖到了第一个组件上方，插入到最前面
+  if (clientY <= rects[0].top) {
+    store.moveComponentBefore(moveId, rects[0].id);
+    return;
+  }
+  // 如果拖到了最后一个组件下方，插入到最后面
+  if (clientY >= rects[rects.length - 1].bottom) {
+    store.moveComponentAfter(moveId, rects[rects.length - 1].id);
+    return;
+  }
+
+  // 否则找到第一个 bottom > clientY 的组件，插入到它前面
+  for (let i = 0; i < rects.length; i++) {
+    if (clientY < rects[i].bottom) {
+      store.moveComponentBefore(moveId, rects[i].id);
+      return;
     }
   }
-  
-  store.addComponent(newComp);
 }
 
 function getDefaultProps(type: string): Record<string, any> {
-  const configs: Record<string, any> = {
-    layout: { header: '后台管理系统', sidebar: 'true', sidebarWidth: '200px', content: '内容区域' },
-    grid: { columns: 2, gutter: 10, colSpans: [12, 12] },
-    button: { text: '按钮', type: 'primary' },
-    input: { placeholder: '请输入', label: '输入框' },
-    table: { columns: ['姓名', '年龄'], data: [['张三', 28], ['李四', 32]] },
-    form: { fields: ['姓名', '邮箱'] },
-    card: { title: '卡片标题', content: '卡片内容' },
-    dialog: { title: '弹窗标题', triggerText: '打开弹窗' },
-  };
-  return configs[type] || {};
+  const config = componentList.find(c => c.type === type);
+  return config?.defaultProps || {};
 }
-
+function getDefaultStyle(type: string): Record<string, string> {
+  const config = componentList.find(c => c.type === type);
+  return config?.defaultStyle || {};
+}
 function generateId(): string {
   return Math.random().toString(36).substr(2, 9);
 }
-
-onMounted(() => {
-  if (canvasRef.value) {
-    Sortable.create(canvasRef.value, {
-      animation: 150,
-      handle: '.drag-handle',
-      onEnd: (evt) => {
-        if (evt.oldIndex !== undefined && evt.newIndex !== undefined) {
-          store.reorder(evt.oldIndex, evt.newIndex);
-        }
-      },
-    });
-  }
-});
 </script>
 
 <style scoped>
