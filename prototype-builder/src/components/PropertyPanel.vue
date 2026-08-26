@@ -11,9 +11,10 @@
             <el-input :model-value="selectedComponent.type" disabled />
           </el-form-item>
           <el-form-item v-for="field in currentPropsConfig" :key="field.key" :label="field.label">
-            <el-input v-if="field.type === 'input'"
-              :model-value="selectedComponent.props[field.key]"
-              @update:model-value="updateProp(field.key, $event)" />
+            <div v-if="field.type === 'input'">
+                <el-input :model-value="selectedComponent.props[field.key]" @update:model-value="updateProp(field.key, $event)" />
+                <el-button v-if="field.key === 'iconName'" size="small" @click="openIconPicker">选择图标</el-button>
+            </div>
             <el-input v-else-if="field.type === 'textarea'" type="textarea"
               :model-value="selectedComponent.props[field.key]"
               @update:model-value="updateProp(field.key, $event)" />
@@ -233,6 +234,12 @@ function updateProp(key: string, value: any) {
 function updateStyle(key: string, value: any) {
   if (selectedComponent.value) {
     store.updateStyle(selectedComponent.value.id, { [key]: String(value) });
+  }
+}
+
+function openIconPicker() {
+  if (selectedComponent.value) {
+    store.openIconPicker(selectedComponent.value.id);
   }
 }
 </script>

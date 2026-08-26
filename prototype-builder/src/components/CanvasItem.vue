@@ -18,6 +18,7 @@
     <div class="item-toolbar" v-if="store.selectedId === component.id">
       <span class="drag-handle" @mousedown.stop>⋮⋮</span>
       <span class="item-type">{{ component.type }}</span>
+      <button v-if="component.type === 'icon'" @click.stop="openIconPicker" style="font-size: 8px;">换图标</button>
       <button @click.stop="store.copyComponent(component.id)">复制</button>
       <button @click.stop="store.removeComponent(component.id)">删除</button>
     </div>
@@ -238,8 +239,13 @@ function createComponent(type: string): ComponentInstance {
   }
   return newComp;
 }
+
 function generateId(): string {
   return Math.random().toString(36).substr(2, 9);
+}
+
+function openIconPicker() {
+  store.openIconPicker(props.component.id);
 }
 </script>
 

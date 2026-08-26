@@ -12,6 +12,8 @@ export const useEditorStore = defineStore('editor', {
     multiSelectedIds: [] as string[],
     history: [] as ComponentInstance[][],
     future: [] as ComponentInstance[][],
+    iconPickerVisible: false,
+    iconPickerTargetId: null as string | null,
   }),
   getters: {
     selectedComponent: (state) => {
@@ -342,6 +344,23 @@ export const useEditorStore = defineStore('editor', {
       if (data) {
         try { this.components = JSON.parse(data); } catch (e) {}
       }
+    },
+    openIconPicker(id: string) {
+      this.iconPickerTargetId = id;
+      this.iconPickerVisible = true;
+    },
+    closeIconPicker() {
+      this.iconPickerVisible = false;
+      this.iconPickerTargetId = null;
+    },
+    selectIcon(iconName: string) {
+      if (this.iconPickerTargetId) {
+        const comp = this.findComponentById(this.iconPickerTargetId);
+        if (comp) {
+          this.updateProps(comp.id, { iconName });
+        }
+      }
+      this.closeIconPicker();
     },
   },
 });

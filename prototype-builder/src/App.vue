@@ -53,6 +53,10 @@
     </div>
 
     <ExportDialog v-model="exportDialogVisible" />
+    <IconPicker
+      v-model="store.iconPickerVisible"
+      @select="handleIconSelect"
+    />
   </div>
 </template>
 
@@ -63,6 +67,7 @@ import ComponentList from './components/ComponentList.vue';
 import CanvasArea from './components/CanvasArea.vue';
 import PropertyPanel from './components/PropertyPanel.vue';
 import ExportDialog from './components/ExportDialog.vue';
+import IconPicker from './components/IconPicker.vue';
 
 const store = useEditorStore();
 const exportDialogVisible = ref(false);
@@ -94,7 +99,9 @@ function undo() { store.undo(); }
 function redo() { store.redo(); }
 function batchCopy() { store.batchCopy(); }
 function batchDelete() { store.batchDelete(); }
-
+function handleIconSelect(iconName: string) {
+  store.selectIcon(iconName);
+}
 onMounted(() => {
   store.loadFromLocal();
 });
