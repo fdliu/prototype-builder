@@ -145,6 +145,9 @@ function onDropToCanvas(e: DragEvent) {
       newComp.slots = {};
       for (let i = 0; i < cols; i++) newComp.slots[`col_${i}`] = [];
     }
+    if (newType === 'dialog') {
+      newComp.slots = { content: [] };
+    }
     store.addComponent(newComp);
   }
 }
@@ -202,7 +205,11 @@ function generateId(): string {
   background: #fafafa;
   overflow-y: auto;
   position: relative;
-  user-select: none; /* 避免拖拽时选中文本 */
+  user-select: none;
+  display: flex;            /* 新增：改为弹性容器 */
+  flex-wrap: wrap;          /* 允许换行 */
+  align-items: flex-start;  /* 顶部对齐 */
+  gap: 10px;                /* 组件间距，可根据需要调整 */
 }
 .empty-tip {
   color: #999;
@@ -212,6 +219,8 @@ function generateId(): string {
 }
 .root-item {
   position: relative;
+  flex-shrink: 0;           /* 防止组件被压缩 */
+  /* 不设置宽度，由内容自适应 */
 }
 .selection-box {
   position: absolute;

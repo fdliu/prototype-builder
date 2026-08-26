@@ -9,6 +9,7 @@
         </template>
         <el-button @click="undo" :disabled="!canUndo">撤销</el-button>
         <el-button @click="redo" :disabled="!canRedo">重做</el-button>
+        <el-button @click="openPreview">预览</el-button>
         <el-button type="primary" @click="exportDialogVisible = true">导出</el-button>
       </div>
     </header>
@@ -57,6 +58,7 @@
       v-model="store.iconPickerVisible"
       @select="handleIconSelect"
     />
+    <PreviewDialog v-model="previewVisible" :html-content="previewHTML" />
   </div>
 </template>
 
@@ -68,12 +70,16 @@ import CanvasArea from './components/CanvasArea.vue';
 import PropertyPanel from './components/PropertyPanel.vue';
 import ExportDialog from './components/ExportDialog.vue';
 import IconPicker from './components/IconPicker.vue';
+import PreviewDialog from './components/PreviewDialog.vue';
+import { generateHTML } from './utils/export';
 
 const store = useEditorStore();
 const exportDialogVisible = ref(false);
 
 const showLeftPanel = ref(true);
 const showRightPanel = ref(true);
+const previewVisible = ref(false);
+const previewHTML = ref('');
 
 function toggleLeftPanel() {
   showLeftPanel.value = !showLeftPanel.value;
@@ -101,6 +107,11 @@ function batchCopy() { store.batchCopy(); }
 function batchDelete() { store.batchDelete(); }
 function handleIconSelect(iconName: string) {
   store.selectIcon(iconName);
+}
+
+function openPreview() {
+  previewHTML.value = generateHTML(store.components);
+  previewVisible.value = true;
 }
 onMounted(() => {
   store.loadFromLocal();

@@ -83,6 +83,23 @@
         </el-row>
       </div>
 
+      <!-- Dialog 容器 -->
+      <div v-else-if="isDialog" class="dialog-editor">
+        <div
+          class="slot-area slot-dialog-content"
+          @dragover.prevent.stop
+          @drop.prevent.stop="handleDropToSlot('content', $event)"
+        >
+          <div class="slot-label">弹窗内容</div>
+          <template v-for="child in getSlotComponents('content')" :key="child.id">
+            <CanvasItem :component="child" :depth="depth + 1" />
+          </template>
+          <div v-if="!getSlotComponents('content').length" class="drop-hint">
+            拖入组件到弹窗内容
+          </div>
+        </div>
+      </div>
+
       <!-- 普通组件 -->
       <div v-else>
         <component :is="getRenderer(component.type)" :props="component.props" />
@@ -104,6 +121,7 @@ const isDragging = ref(false);
 
 const isLayout = computed(() => props.component.type === 'layout');
 const isGrid = computed(() => props.component.type === 'grid');
+const isDialog = computed(() => props.component.type === 'dialog');
 
 const showSidebar = computed(() => {
   const val = props.component.props?.showSidebar;
@@ -237,6 +255,9 @@ function createComponent(type: string): ComponentInstance {
     newComp.slots = {};
     for (let i = 0; i < cols; i++) newComp.slots[`col_${i}`] = [];
   }
+  if (type === 'dialog') {
+    newComp.slots = { content: [] };
+  }
   return newComp;
 }
 
@@ -251,10 +272,9 @@ function openIconPicker() {
 
 <style scoped>
 .canvas-item-wrapper {
-  display: inline-block;
+  display: block; 
   width: fit-content;
   max-width: 100%;
-  vertical-align: top;
 }
 .canvas-item-wrapper.wrapper-container {
   display: block;
@@ -417,5 +437,15 @@ function openIconPicker() {
   padding: 15px;
   font-size: 12px;
   pointer-events: none;
+}
+.dialog-editor {
+  min-width: 200px;
+}
+.slot-dialog-content {
+  background: #fafafa;
+  border: 2px dashed #ccc;
+  border-radius: 4px;
+  min-height: 80px;
+  padding: 8px;
 }
 </style>
