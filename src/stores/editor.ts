@@ -1,11 +1,11 @@
-import { defineStore } from 'pinia';
-import type { ComponentInstance } from '../types';
+import { defineStore } from "pinia";
+import type { ComponentInstance } from "../types";
 
 function generateId(): string {
   return Math.random().toString(36).substr(2, 9);
 }
 
-export const useEditorStore = defineStore('editor', {
+export const useEditorStore = defineStore("editor", {
   state: () => ({
     components: [] as ComponentInstance[],
     selectedId: null as string | null,
@@ -17,7 +17,9 @@ export const useEditorStore = defineStore('editor', {
   }),
   getters: {
     selectedComponent: (state) => {
-      function findComponent(comps: ComponentInstance[]): ComponentInstance | null {
+      function findComponent(
+        comps: ComponentInstance[]
+      ): ComponentInstance | null {
         for (const comp of comps) {
           if (comp.id === state.selectedId) return comp;
           if (comp.children) {
@@ -41,7 +43,11 @@ export const useEditorStore = defineStore('editor', {
     isMultiSelect: (state) => state.multiSelectedIds.length > 0,
   },
   actions: {
-    addComponent(comp: ComponentInstance, parentId?: string, slotName?: string) {
+    addComponent(
+      comp: ComponentInstance,
+      parentId?: string,
+      slotName?: string
+    ) {
       this.commit();
       if (parentId && slotName) {
         const parent = this.findComponentById(parentId);
@@ -83,13 +89,13 @@ export const useEditorStore = defineStore('editor', {
       this.commit();
       this.removeComponentFromParent(id);
       if (this.selectedId === id) this.selectedId = null;
-      this.multiSelectedIds = this.multiSelectedIds.filter(mid => mid !== id);
+      this.multiSelectedIds = this.multiSelectedIds.filter((mid) => mid !== id);
       this.saveToLocal();
     },
     batchDelete() {
       if (this.multiSelectedIds.length === 0) return;
       this.commit();
-      this.multiSelectedIds.forEach(id => {
+      this.multiSelectedIds.forEach((id) => {
         this.removeComponentFromParent(id);
         if (this.selectedId === id) this.selectedId = null;
       });
@@ -99,7 +105,7 @@ export const useEditorStore = defineStore('editor', {
     batchCopy() {
       if (this.multiSelectedIds.length === 0) return;
       const newComps: ComponentInstance[] = [];
-      this.multiSelectedIds.forEach(id => {
+      this.multiSelectedIds.forEach((id) => {
         const comp = this.findComponentById(id);
         if (comp) {
           const newComp: ComponentInstance = JSON.parse(JSON.stringify(comp));
@@ -119,7 +125,7 @@ export const useEditorStore = defineStore('editor', {
       this.commit();
       // 追加到根级
       this.components.push(...newComps);
-      this.multiSelectedIds = newComps.map(c => c.id);
+      this.multiSelectedIds = newComps.map((c) => c.id);
       this.selectedId = this.multiSelectedIds[0] || null;
       this.saveToLocal();
     },
@@ -163,7 +169,7 @@ export const useEditorStore = defineStore('editor', {
     moveComponentToRoot(id: string) {
       const comp = this.findComponentById(id);
       if (!comp) return;
-      if (this.components.some(c => c.id === id)) return;
+      if (this.components.some((c) => c.id === id)) return;
       this.commit();
       this.removeComponentFromParent(id);
       this.components.push(comp);
@@ -192,7 +198,7 @@ export const useEditorStore = defineStore('editor', {
       const target = this.findComponentById(targetId);
       if (!source || !target) return;
       this.removeComponentFromParent(sourceId);
-      const targetIndex = this.components.findIndex(c => c.id === targetId);
+      const targetIndex = this.components.findIndex((c) => c.id === targetId);
       if (targetIndex !== -1) {
         this.components.splice(targetIndex, 0, source);
       } else {
@@ -208,7 +214,7 @@ export const useEditorStore = defineStore('editor', {
       const target = this.findComponentById(targetId);
       if (!source || !target) return;
       this.removeComponentFromParent(sourceId);
-      const targetIndex = this.components.findIndex(c => c.id === targetId);
+      const targetIndex = this.components.findIndex((c) => c.id === targetId);
       if (targetIndex !== -1) {
         this.components.splice(targetIndex + 1, 0, source);
       } else {
@@ -220,16 +226,19 @@ export const useEditorStore = defineStore('editor', {
     },
     swapComponents(id1: string, id2: string) {
       this.commit();
-      const idx1 = this.components.findIndex(c => c.id === id1);
-      const idx2 = this.components.findIndex(c => c.id === id2);
+      const idx1 = this.components.findIndex((c) => c.id === id1);
+      const idx2 = this.components.findIndex((c) => c.id === id2);
       if (idx1 !== -1 && idx2 !== -1) {
-        [this.components[idx1], this.components[idx2]] = [this.components[idx2], this.components[idx1]];
+        [this.components[idx1], this.components[idx2]] = [
+          this.components[idx2],
+          this.components[idx1],
+        ];
         this.saveToLocal();
       }
     },
     insertAfter(newComp: ComponentInstance, targetId: string) {
       this.commit();
-      const idx = this.components.findIndex(c => c.id === targetId);
+      const idx = this.components.findIndex((c) => c.id === targetId);
       if (idx !== -1) {
         this.components.splice(idx + 1, 0, newComp);
         this.selectedId = newComp.id;
@@ -259,7 +268,10 @@ export const useEditorStore = defineStore('editor', {
       };
       return find(this.components);
     },
-    isDescendant(possibleDescendant: ComponentInstance, ancestor: ComponentInstance): boolean {
+    isDescendant(
+      possibleDescendant: ComponentInstance,
+      ancestor: ComponentInstance
+    ): boolean {
       if (!ancestor.slots) {
         if (ancestor.children) {
           for (const child of ancestor.children) {
@@ -281,7 +293,7 @@ export const useEditorStore = defineStore('editor', {
       return false;
     },
     removeComponentFromParent(id: string) {
-      const rootIdx = this.components.findIndex(c => c.id === id);
+      const rootIdx = this.components.findIndex((c) => c.id === id);
       if (rootIdx !== -1) {
         this.components.splice(rootIdx, 1);
         return;
@@ -292,7 +304,7 @@ export const useEditorStore = defineStore('editor', {
             for (const s of Object.keys(comp.slots)) {
               const slotComps = comp.slots[s];
               if (slotComps) {
-                const idx = slotComps.findIndex(c => c.id === id);
+                const idx = slotComps.findIndex((c) => c.id === id);
                 if (idx !== -1) {
                   slotComps.splice(idx, 1);
                   return true;
@@ -302,7 +314,7 @@ export const useEditorStore = defineStore('editor', {
             }
           }
           if (comp.children) {
-            const idx = comp.children.findIndex(c => c.id === id);
+            const idx = comp.children.findIndex((c) => c.id === id);
             if (idx !== -1) {
               comp.children.splice(idx, 1);
               return true;
@@ -337,12 +349,17 @@ export const useEditorStore = defineStore('editor', {
       }
     },
     saveToLocal() {
-      localStorage.setItem('prototype-builder-data', JSON.stringify(this.components));
+      localStorage.setItem(
+        "prototype-builder-data",
+        JSON.stringify(this.components)
+      );
     },
     loadFromLocal() {
-      const data = localStorage.getItem('prototype-builder-data');
+      const data = localStorage.getItem("prototype-builder-data");
       if (data) {
-        try { this.components = JSON.parse(data); } catch (e) {}
+        try {
+          this.components = JSON.parse(data);
+        } catch (e) {}
       }
     },
     openIconPicker(id: string) {
@@ -361,6 +378,15 @@ export const useEditorStore = defineStore('editor', {
         }
       }
       this.closeIconPicker();
+    },
+    insertComponentAt(comp: ComponentInstance, index: number) {
+      this.commit();
+      if (index < 0) index = 0;
+      if (index > this.components.length) index = this.components.length;
+      this.components.splice(index, 0, comp);
+      this.selectedId = comp.id;
+      this.multiSelectedIds = [];
+      this.saveToLocal();
     },
   },
 });

@@ -11,6 +11,7 @@
     <div v-if="store.components.length === 0" class="empty-tip">
       从左侧拖拽组件到这里
     </div>
+
     <div
       v-for="comp in store.components"
       :key="comp.id"
@@ -21,19 +22,15 @@
     </div>
 
     <!-- 框选矩形 -->
-    <div
-      v-if="isSelecting"
-      class="selection-box"
-      :style="selectionStyle"
-    ></div>
+    <div v-if="isSelecting" class="selection-box" :style="selectionStyle"></div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { useEditorStore } from '../stores/editor';
-import CanvasItem from './CanvasItem.vue';
-import { componentList } from '../config/componentConfig';
+import { ref, computed } from "vue";
+import { useEditorStore } from "../stores/editor";
+import CanvasItem from "./CanvasItem.vue";
+import { componentList } from "../config/componentConfig";
 
 const store = useEditorStore();
 const canvasRef = ref<HTMLElement | null>(null);
@@ -51,20 +48,18 @@ const selectionStyle = computed(() => {
   const width = Math.abs(currentX.value - startX.value);
   const height = Math.abs(currentY.value - startY.value);
   return {
-    left: left + 'px',
-    top: top + 'px',
-    width: width + 'px',
-    height: height + 'px',
+    left: left + "px",
+    top: top + "px",
+    width: width + "px",
+    height: height + "px",
   };
 });
 
+// 鼠标按下：启动框选（仅画布空白区域）
 function onMouseDown(e: MouseEvent) {
-  // 仅当点击在画布空白区域（不是组件）时启动框选
   const target = e.target as HTMLElement;
-  if (target.closest('.canvas-item')) return;
-  if (target.closest('.component-list')) return;
-
-  // 阻止默认行为，避免拖拽图片等
+  if (target.closest(".canvas-item")) return;
+  if (target.closest(".component-list")) return;
   e.preventDefault();
   isSelecting.value = true;
   const rect = canvasRef.value!.getBoundingClientRect();
@@ -85,7 +80,6 @@ function onMouseUp(e: MouseEvent) {
   if (!isSelecting.value) return;
   isSelecting.value = false;
 
-  // 计算选择框矩形
   const rect = canvasRef.value!.getBoundingClientRect();
   const left = Math.min(startX.value, currentX.value);
   const top = Math.min(startY.value, currentY.value);
@@ -98,8 +92,7 @@ function onMouseUp(e: MouseEvent) {
     bottom: bottom + rect.top,
   };
 
-  // 查找相交的根级组件
-  const rootItems = canvasRef.value!.querySelectorAll('.root-item');
+  const rootItems = canvasRef.value!.querySelectorAll(".root-item");
   const selectedIds: string[] = [];
   rootItems.forEach((el) => {
     const elRect = (el as HTMLElement).getBoundingClientRect();
@@ -122,13 +115,16 @@ function onMouseUp(e: MouseEvent) {
   }
 }
 
-function onDropToCanvas(e: DragEvent) {
-  const moveId = e.dataTransfer?.getData('moveComponentId');
-  const newType = e.dataTransfer?.getData('componentType');
+// 捕获阶段处理新组件拖入（优先于组件内部 drop）
+function onDropCapture(e: DragEvent) {
+  const newType = e.dataTransfer?.getData("componentType");
+  const moveId = e.dataTransfer?.getData("moveComponentId");
 
-  if (moveId) {
-    insertComponentAtDropPosition(moveId, e.clientY);
-  } else if (newType) {
+  // 只处理新组件拖入（左侧拖入）
+  if (newType) {
+    e.stopPropagation(); // 阻止组件内部 drop 处理
+    e.preventDefault();
+
     const defaultProps = getDefaultProps(newType);
     const defaultStyle = getDefaultStyle(newType);
     const newComp: any = {
@@ -137,33 +133,99 @@ function onDropToCanvas(e: DragEvent) {
       props: { ...defaultProps },
       style: { ...defaultStyle },
     };
-    if (newType === 'layout') {
+    if (newType === "layout") {
       newComp.slots = { header: [], sidebar: [], content: [], footer: [] };
     }
-    if (newType === 'grid') {
+    if (newType === "grid") {
       const cols = Number(defaultProps.columns) || 2;
       newComp.slots = {};
       for (let i = 0; i < cols; i++) newComp.slots[`col_${i}`] = [];
     }
-    if (newType === 'dialog') {
+    if (newType === "dialog") {
       newComp.slots = { content: [] };
     }
-    store.addComponent(newComp);
+
+    insertNewComponentAtPosition(newComp, e.clientY);
+  }
+  // 移动已有组件的处理交给 CanvasItem 或 onDropToCanvas，此处忽略
+}
+
+// 原有的 onDropToCanvas 现在只处理移动已有组件（备用）
+function onDropToCanvas(e: DragEvent) {
+  const newType = e.dataTransfer?.getData("componentType");
+  const moveId = e.dataTransfer?.getData("moveComponentId");
+
+  if (newType) {
+    // 新组件插入
+    const defaultProps = getDefaultProps(newType);
+    const defaultStyle = getDefaultStyle(newType);
+    const newComp: any = {
+      id: generateId(),
+      type: newType,
+      props: { ...defaultProps },
+      style: { ...defaultStyle },
+    };
+    if (newType === "layout") {
+      newComp.slots = { header: [], sidebar: [], content: [], footer: [] };
+    }
+    if (newType === "grid") {
+      const cols = Number(defaultProps.columns) || 2;
+      newComp.slots = {};
+      for (let i = 0; i < cols; i++) newComp.slots[`col_${i}`] = [];
+    }
+    if (newType === "dialog") {
+      newComp.slots = { content: [] };
+    }
+    insertNewComponentAtPosition(newComp, e.clientY);
+  } else if (moveId) {
+    // 移动已有组件
+    insertComponentAtDropPosition(moveId, e.clientY);
   }
 }
 
-function insertComponentAtDropPosition(moveId: string, clientY: number) {
-  const rootItems = canvasRef.value!.querySelectorAll('.root-item');
-  if (rootItems.length === 0) {
-    store.moveComponentToRoot(moveId);
+// 根据鼠标 Y 坐标插入新组件到根级数组
+function insertNewComponentAtPosition(newComp: any, clientY: number) {
+  const rootItems = canvasRef.value?.querySelectorAll(".root-item");
+  if (!rootItems || rootItems.length === 0) {
+    store.addComponent(newComp);
     return;
   }
 
-  const rects: { id: string; top: number; bottom: number }[] = [];
+  const rects: { top: number; bottom: number }[] = [];
   rootItems.forEach((el) => {
     const rect = el.getBoundingClientRect();
+    rects.push({ top: rect.top, bottom: rect.bottom });
+  });
+
+  let insertIndex = rects.length;
+  if (clientY <= rects[0].top) {
+    insertIndex = 0;
+  } else if (clientY >= rects[rects.length - 1].bottom) {
+    insertIndex = rects.length;
+  } else {
+    for (let i = 0; i < rects.length; i++) {
+      if (clientY < rects[i].bottom) {
+        insertIndex = i;
+        break;
+      }
+    }
+  }
+
+  store.insertComponentAt(newComp, insertIndex);
+}
+
+// 原有的插入位置函数（用于移动已有组件）
+function insertComponentAtDropPosition(moveId: string, clientY: number) {
+  const rootItems = canvasRef.value?.querySelectorAll(".root-item");
+  if (rootItems?.length === 0) {
+    store.moveComponentToRoot(moveId);
+    return;
+  }
+  const rects: { id: string; top: number; bottom: number }[] = [];
+  rootItems?.forEach((el) => {
+    const rect = el.getBoundingClientRect();
     rects.push({
-      id: (el as HTMLElement).dataset.id || '',
+      id: (el as HTMLElement).dataset.id || "",
       top: rect.top,
       bottom: rect.bottom,
     });
@@ -185,14 +247,17 @@ function insertComponentAtDropPosition(moveId: string, clientY: number) {
   }
 }
 
+// 默认属性获取函数
 function getDefaultProps(type: string): Record<string, any> {
-  const config = componentList.find(c => c.type === type);
+  const config = componentList.find((c) => c.type === type);
   return config?.defaultProps || {};
 }
+
 function getDefaultStyle(type: string): Record<string, string> {
-  const config = componentList.find(c => c.type === type);
+  const config = componentList.find((c) => c.type === type);
   return config?.defaultStyle || {};
 }
+
 function generateId(): string {
   return Math.random().toString(36).substr(2, 9);
 }
@@ -206,21 +271,22 @@ function generateId(): string {
   overflow-y: auto;
   position: relative;
   user-select: none;
-  display: flex;            /* 新增：改为弹性容器 */
-  flex-wrap: wrap;          /* 允许换行 */
-  align-items: flex-start;  /* 顶部对齐 */
-  gap: 10px;                /* 组件间距，可根据需要调整 */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px;
 }
 .empty-tip {
   color: #999;
   text-align: center;
   padding: 40px;
   font-size: 16px;
+  width: 100%;
 }
 .root-item {
   position: relative;
-  flex-shrink: 0;           /* 防止组件被压缩 */
-  /* 不设置宽度，由内容自适应 */
+  flex-shrink: 0;
+  max-width: 100%;
 }
 .selection-box {
   position: absolute;

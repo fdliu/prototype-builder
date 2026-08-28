@@ -1,11 +1,16 @@
 <template>
-  <div class="canvas-item-wrapper" :class="{ 'wrapper-container': isLayout || isGrid }">
+  <div
+    class="canvas-item-wrapper"
+    :class="{ 'wrapper-container': isLayout || isGrid }"
+  >
     <div
       class="canvas-item"
       :class="{
-        selected: store.selectedId === component.id || store.multiSelectedIds.includes(component.id),
+        selected:
+          store.selectedId === component.id ||
+          store.multiSelectedIds.includes(component.id),
         'is-container': isLayout || isGrid,
-        'full-width': isFullWidth
+        'full-width': isFullWidth,
       }"
       @click.stop="store.select(component.id)"
       :style="componentStyle"
@@ -13,56 +18,91 @@
       @dragstart="onDragStart"
       @dragend="onDragEnd"
       @dragover.prevent.stop="onDragOver"
-      @drop.prevent.stop="onDropToSelf"
+      @drop.prevent="onDropToSelf"
     >
-    <div class="item-toolbar" v-if="store.selectedId === component.id">
-      <span class="drag-handle" @mousedown.stop>⋮⋮</span>
-      <span class="item-type">{{ component.type }}</span>
-      <button v-if="component.type === 'icon'" @click.stop="openIconPicker" style="font-size: 8px;">换图标</button>
-      <button @click.stop="store.copyComponent(component.id)">复制</button>
-      <button @click.stop="store.removeComponent(component.id)">删除</button>
-    </div>
+      <div class="item-toolbar" v-if="store.selectedId === component.id">
+        <span class="drag-handle" @mousedown.stop>⋮⋮</span>
+        <span class="item-type">{{ component.type }}</span>
+        <button
+          v-if="component.type === 'icon'"
+          @click.stop="openIconPicker"
+          style="font-size: 8px"
+        >
+          换图标
+        </button>
+        <button @click.stop="store.copyComponent(component.id)">复制</button>
+        <button @click.stop="store.removeComponent(component.id)">删除</button>
+      </div>
 
       <!-- Layout 容器 -->
       <div v-if="isLayout" class="layout-editor">
-        <div class="slot-area slot-header"
-             @dragover.prevent.stop
-             @drop.prevent.stop="handleDropToSlot('header', $event)">
+        <div
+          class="slot-area slot-header"
+          @dragover.prevent.stop
+          @drop.prevent.stop="handleDropToSlot('header', $event)"
+        >
           <div class="slot-label">Header</div>
-          <template v-for="child in getSlotComponents('header')" :key="child.id">
+          <template
+            v-for="child in getSlotComponents('header')"
+            :key="child.id"
+          >
             <CanvasItem :component="child" :depth="depth + 1" />
           </template>
-          <div v-if="!getSlotComponents('header').length" class="drop-hint">拖入组件到 Header</div>
+          <div v-if="!getSlotComponents('header').length" class="drop-hint">
+            拖入组件到 Header
+          </div>
         </div>
         <div class="layout-main">
-          <div v-if="showSidebar" class="slot-area slot-sidebar"
-               :style="{ width: component.props.sidebarWidth || '200px' }"
-               @dragover.prevent.stop
-               @drop.prevent.stop="handleDropToSlot('sidebar', $event)">
+          <div
+            v-if="showSidebar"
+            class="slot-area slot-sidebar"
+            :style="{ width: component.props.sidebarWidth || '200px' }"
+            @dragover.prevent.stop
+            @drop.prevent.stop="handleDropToSlot('sidebar', $event)"
+          >
             <div class="slot-label">Sidebar</div>
-            <template v-for="child in getSlotComponents('sidebar')" :key="child.id">
+            <template
+              v-for="child in getSlotComponents('sidebar')"
+              :key="child.id"
+            >
               <CanvasItem :component="child" :depth="depth + 1" />
             </template>
-            <div v-if="!getSlotComponents('sidebar').length" class="drop-hint">拖入组件</div>
+            <div v-if="!getSlotComponents('sidebar').length" class="drop-hint">
+              拖入组件
+            </div>
           </div>
-          <div class="slot-area slot-content"
-               @dragover.prevent.stop
-               @drop.prevent.stop="handleDropToSlot('content', $event)">
+          <div
+            class="slot-area slot-content"
+            @dragover.prevent.stop
+            @drop.prevent.stop="handleDropToSlot('content', $event)"
+          >
             <div class="slot-label">Content</div>
-            <template v-for="child in getSlotComponents('content')" :key="child.id">
+            <template
+              v-for="child in getSlotComponents('content')"
+              :key="child.id"
+            >
               <CanvasItem :component="child" :depth="depth + 1" />
             </template>
-            <div v-if="!getSlotComponents('content').length" class="drop-hint">拖入组件到 Content</div>
+            <div v-if="!getSlotComponents('content').length" class="drop-hint">
+              拖入组件到 Content
+            </div>
           </div>
         </div>
-        <div class="slot-area slot-footer"
-             @dragover.prevent.stop
-             @drop.prevent.stop="handleDropToSlot('footer', $event)">
+        <div
+          class="slot-area slot-footer"
+          @dragover.prevent.stop
+          @drop.prevent.stop="handleDropToSlot('footer', $event)"
+        >
           <div class="slot-label">Footer</div>
-          <template v-for="child in getSlotComponents('footer')" :key="child.id">
+          <template
+            v-for="child in getSlotComponents('footer')"
+            :key="child.id"
+          >
             <CanvasItem :component="child" :depth="depth + 1" />
           </template>
-          <div v-if="!getSlotComponents('footer').length" class="drop-hint">拖入组件到 Footer</div>
+          <div v-if="!getSlotComponents('footer').length" class="drop-hint">
+            拖入组件到 Footer
+          </div>
         </div>
       </div>
 
@@ -70,14 +110,23 @@
       <div v-else-if="isGrid" class="grid-editor">
         <el-row :gutter="gutter">
           <el-col v-for="(span, index) in colSpans" :key="index" :span="span">
-            <div class="grid-col-area"
-                 @dragover.prevent.stop
-                 @drop.prevent.stop="handleDropToCol(index, $event)">
-              <div class="col-label">列 {{ index + 1 }}（span: {{ span }}）</div>
-              <template v-for="child in getColComponents(index)" :key="child.id">
+            <div
+              class="grid-col-area"
+              @dragover.prevent.stop
+              @drop.prevent.stop="handleDropToCol(index, $event)"
+            >
+              <div class="col-label">
+                列 {{ index + 1 }}（span: {{ span }}）
+              </div>
+              <template
+                v-for="child in getColComponents(index)"
+                :key="child.id"
+              >
                 <CanvasItem :component="child" :depth="depth + 1" />
               </template>
-              <div v-if="!getColComponents(index).length" class="drop-hint">拖入组件</div>
+              <div v-if="!getColComponents(index).length" class="drop-hint">
+                拖入组件
+              </div>
             </div>
           </el-col>
         </el-row>
@@ -91,7 +140,10 @@
           @drop.prevent.stop="handleDropToSlot('content', $event)"
         >
           <div class="slot-label">弹窗内容</div>
-          <template v-for="child in getSlotComponents('content')" :key="child.id">
+          <template
+            v-for="child in getSlotComponents('content')"
+            :key="child.id"
+          >
             <CanvasItem :component="child" :depth="depth + 1" />
           </template>
           <div v-if="!getSlotComponents('content').length" class="drop-hint">
@@ -109,24 +161,24 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { useEditorStore } from '../stores/editor';
-import { getRenderer } from './renderer';
-import { componentList } from '../config/componentConfig';
-import type { ComponentInstance } from '../types';
+import { computed, ref } from "vue";
+import { useEditorStore } from "../stores/editor";
+import { getRenderer } from "./renderer";
+import { componentList } from "../config/componentConfig";
+import type { ComponentInstance } from "../types";
 
 const props = defineProps<{ component: ComponentInstance; depth: number }>();
 const store = useEditorStore();
 const isDragging = ref(false);
 
-const isLayout = computed(() => props.component.type === 'layout');
-const isGrid = computed(() => props.component.type === 'grid');
-const isDialog = computed(() => props.component.type === 'dialog');
+const isLayout = computed(() => props.component.type === "layout");
+const isGrid = computed(() => props.component.type === "grid");
+const isDialog = computed(() => props.component.type === "dialog");
 
 const showSidebar = computed(() => {
   const val = props.component.props?.showSidebar;
   if (val === undefined || val === null) return true;
-  return val === 'true' || val === true;
+  return val === "true" || val === true;
 });
 
 const gutter = computed(() => Number(props.component.props?.gutter) || 0);
@@ -136,8 +188,8 @@ const colSpans = computed(() => {
   const spans = props.component.props?.colSpans;
   let spanArray: number[] = [];
   if (Array.isArray(spans)) spanArray = spans.map(Number);
-  else if (typeof spans === 'string' && spans.trim())
-    spanArray = spans.split(',').map((s: string) => Number(s.trim()) || 12);
+  else if (typeof spans === "string" && spans.trim())
+    spanArray = spans.split(",").map((s: string) => Number(s.trim()) || 12);
   if (spanArray.length !== cols) {
     const span = Math.floor(24 / cols);
     spanArray = Array(cols).fill(span);
@@ -152,21 +204,21 @@ const componentStyle = computed(() => {
   const cssStyle: Record<string, string> = {};
   if (style.width) cssStyle.width = style.width;
   if (style.height) cssStyle.height = style.height;
-  if (style.paddingTop) cssStyle.paddingTop = style.paddingTop + 'px';
-  if (style.paddingRight) cssStyle.paddingRight = style.paddingRight + 'px';
-  if (style.paddingBottom) cssStyle.paddingBottom = style.paddingBottom + 'px';
-  if (style.paddingLeft) cssStyle.paddingLeft = style.paddingLeft + 'px';
-  if (style.marginTop) cssStyle.marginTop = style.marginTop + 'px';
-  if (style.marginRight) cssStyle.marginRight = style.marginRight + 'px';
-  if (style.marginBottom) cssStyle.marginBottom = style.marginBottom + 'px';
-  if (style.marginLeft) cssStyle.marginLeft = style.marginLeft + 'px';
+  if (style.paddingTop) cssStyle.paddingTop = style.paddingTop + "px";
+  if (style.paddingRight) cssStyle.paddingRight = style.paddingRight + "px";
+  if (style.paddingBottom) cssStyle.paddingBottom = style.paddingBottom + "px";
+  if (style.paddingLeft) cssStyle.paddingLeft = style.paddingLeft + "px";
+  if (style.marginTop) cssStyle.marginTop = style.marginTop + "px";
+  if (style.marginRight) cssStyle.marginRight = style.marginRight + "px";
+  if (style.marginBottom) cssStyle.marginBottom = style.marginBottom + "px";
+  if (style.marginLeft) cssStyle.marginLeft = style.marginLeft + "px";
   return cssStyle;
 });
 
 const isFullWidth = computed(() => {
   if (isLayout.value || isGrid.value) return true;
   const width = props.component.style?.width;
-  return width === '100%' || width === '100%' || width === '100%';
+  return width === "100%" || width === "100%" || width === "100%";
 });
 
 function getSlotComponents(slotName: string): ComponentInstance[] {
@@ -179,46 +231,66 @@ function getColComponents(colIndex: number): ComponentInstance[] {
 }
 
 function onDragStart(e: DragEvent) {
-  e.stopPropagation(); // 阻止冒泡，避免父组件覆盖数据
+  e.stopPropagation();
   isDragging.value = true;
   if (e.dataTransfer) {
-    e.dataTransfer.setData('moveComponentId', props.component.id);
-    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData("moveComponentId", props.component.id);
+    e.dataTransfer.effectAllowed = "move";
   }
 }
-function onDragEnd() { isDragging.value = false; }
+function onDragEnd() {
+  isDragging.value = false;
+}
 function onDragOver(e: DragEvent) {
-  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+  if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
 }
 
 function onDropToSelf(e: DragEvent) {
-  const moveId = e.dataTransfer?.getData('moveComponentId');
-  const newType = e.dataTransfer?.getData('componentType');
-
+  const moveId = e.dataTransfer?.getData("moveComponentId");
   if (moveId && moveId !== props.component.id) {
-    const sourceIndex = store.components.findIndex(c => c.id === moveId);
-    const targetIndex = store.components.findIndex(c => c.id === props.component.id);
-
+    // 移动已有组件的逻辑
+    const sourceIndex = store.components.findIndex((c) => c.id === moveId);
+    const targetIndex = store.components.findIndex(
+      (c) => c.id === props.component.id
+    );
     if (sourceIndex !== -1 && targetIndex !== -1) {
-      // 根级组件之间排序：源在前则插入到目标后，源在后则插入到目标前
       if (sourceIndex < targetIndex) {
         store.moveComponentAfter(moveId, props.component.id);
       } else {
         store.moveComponentBefore(moveId, props.component.id);
       }
     } else {
-      // 非根级组件回退为交换
       store.swapComponents(moveId, props.component.id);
     }
-  } else if (newType) {
-    const newComp = createComponent(newType);
-    store.insertAfter(newComp, props.component.id);
   }
+  // 不处理 newType，也不 stopPropagation，让事件冒泡到画布容器
+}
+
+// 根据鼠标 Y 坐标计算插入索引
+function getInsertIndexByClientY(clientY: number): number {
+  const rootItems = document.querySelectorAll(".root-item");
+  if (rootItems.length === 0) return 0;
+
+  const rects: { top: number; bottom: number }[] = [];
+  rootItems.forEach((el) => {
+    const rect = el.getBoundingClientRect();
+    rects.push({ top: rect.top, bottom: rect.bottom });
+  });
+
+  if (clientY <= rects[0].top) return 0;
+  if (clientY >= rects[rects.length - 1].bottom) return rects.length;
+
+  for (let i = 0; i < rects.length; i++) {
+    if (clientY < rects[i].bottom) {
+      return i;
+    }
+  }
+  return rects.length;
 }
 
 function handleDropToSlot(slotName: string, e: DragEvent) {
-  const moveId = e.dataTransfer?.getData('moveComponentId');
-  const newType = e.dataTransfer?.getData('componentType');
+  const moveId = e.dataTransfer?.getData("moveComponentId");
+  const newType = e.dataTransfer?.getData("componentType");
   if (moveId) {
     store.moveComponentToSlot(moveId, props.component.id, slotName);
   } else if (newType) {
@@ -229,8 +301,8 @@ function handleDropToSlot(slotName: string, e: DragEvent) {
 
 function handleDropToCol(colIndex: number, e: DragEvent) {
   const slotName = `col_${colIndex}`;
-  const moveId = e.dataTransfer?.getData('moveComponentId');
-  const newType = e.dataTransfer?.getData('componentType');
+  const moveId = e.dataTransfer?.getData("moveComponentId");
+  const newType = e.dataTransfer?.getData("componentType");
   if (moveId) {
     store.moveComponentToSlot(moveId, props.component.id, slotName);
   } else if (newType) {
@@ -240,22 +312,22 @@ function handleDropToCol(colIndex: number, e: DragEvent) {
 }
 
 function createComponent(type: string): ComponentInstance {
-  const config = componentList.find(c => c.type === type);
+  const config = componentList.find((c) => c.type === type);
   const newComp: ComponentInstance = {
     id: generateId(),
     type,
     props: { ...(config?.defaultProps || {}) },
     style: { ...(config?.defaultStyle || {}) },
   };
-  if (type === 'layout') {
+  if (type === "layout") {
     newComp.slots = { header: [], sidebar: [], content: [], footer: [] };
   }
-  if (type === 'grid') {
+  if (type === "grid") {
     const cols = Number(config?.defaultProps?.columns) || 2;
     newComp.slots = {};
     for (let i = 0; i < cols; i++) newComp.slots[`col_${i}`] = [];
   }
-  if (type === 'dialog') {
+  if (type === "dialog") {
     newComp.slots = { content: [] };
   }
   return newComp;
@@ -272,7 +344,7 @@ function openIconPicker() {
 
 <style scoped>
 .canvas-item-wrapper {
-  display: block; 
+  display: block;
   width: fit-content;
   max-width: 100%;
 }
@@ -287,7 +359,7 @@ function openIconPicker() {
   width: fit-content;
   max-width: 100%;
   padding: 8px;
-  margin-bottom: 10px;
+  /* margin-bottom: 10px; */
   background: #fff;
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -354,18 +426,22 @@ function openIconPicker() {
   background: white;
   cursor: pointer;
 }
-.canvas-item:hover { border-color: #bbb; }
+.canvas-item:hover {
+  border-color: #bbb;
+}
 .canvas-item.selected {
   border-color: #409eff;
   box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
 }
-.canvas-item.dragging { opacity: 0.5; }
+.canvas-item.dragging {
+  opacity: 0.5;
+}
 /* 全宽组件工具栏移到右上角 */
 .canvas-item.full-width .item-toolbar {
   top: 4px;
   right: 4px;
   transform: none;
-  flex-direction: row;      /* 可选：水平排列，更紧凑 */
+  flex-direction: row; /* 可选：水平排列，更紧凑 */
   align-items: center;
 }
 .item-toolbar {
@@ -382,8 +458,14 @@ function openIconPicker() {
   color: #999;
   user-select: none;
 }
-.drag-handle:active { cursor: grabbing; }
-.item-type { font-size: 12px; color: #666; flex: 1; }
+.drag-handle:active {
+  cursor: grabbing;
+}
+.item-type {
+  font-size: 12px;
+  color: #666;
+  flex: 1;
+}
 .item-toolbar button {
   font-size: 12px;
   padding: 2px 8px;
@@ -392,8 +474,15 @@ function openIconPicker() {
   background: white;
   cursor: pointer;
 }
-.layout-editor { display: flex; flex-direction: column; gap: 8px; }
-.layout-main { display: flex; gap: 8px; }
+.layout-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.layout-main {
+  display: flex;
+  gap: 8px;
+}
 .slot-area {
   padding: 8px;
   border: 2px dashed #ccc;
@@ -402,11 +491,23 @@ function openIconPicker() {
   background: #fafafa;
   transition: border-color 0.2s;
 }
-.slot-area:hover { border-color: #409eff; }
-.slot-header { background: #ecf5ff; }
-.slot-sidebar { background: #f0f0f0; flex-shrink: 0; }
-.slot-content { background: #fff; flex: 1; }
-.slot-footer { background: #f0f0f0; }
+.slot-area:hover {
+  border-color: #409eff;
+}
+.slot-header {
+  background: #ecf5ff;
+}
+.slot-sidebar {
+  background: #f0f0f0;
+  flex-shrink: 0;
+}
+.slot-content {
+  background: #fff;
+  flex: 1;
+}
+.slot-footer {
+  background: #f0f0f0;
+}
 .slot-label {
   font-size: 11px;
   color: #999;
@@ -414,7 +515,9 @@ function openIconPicker() {
   font-weight: bold;
   pointer-events: none;
 }
-.grid-editor { width: 100%; }
+.grid-editor {
+  width: 100%;
+}
 .grid-col-area {
   padding: 8px;
   border: 2px dashed #dcdfe6;
@@ -423,7 +526,9 @@ function openIconPicker() {
   background: #fafafa;
   transition: border-color 0.2s;
 }
-.grid-col-area:hover { border-color: #409eff; }
+.grid-col-area:hover {
+  border-color: #409eff;
+}
 .col-label {
   font-size: 11px;
   color: #999;
