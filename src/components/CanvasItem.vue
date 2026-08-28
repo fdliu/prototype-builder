@@ -160,7 +160,7 @@
 
       <!-- 缩放手柄（仅容器组件显示） -->
       <div
-        v-if="isLayout || isGrid"
+        v-if="isLayout || isGrid || component.type === 'table'"
         class="resize-handle"
         @mousedown.stop="startResize"
       ></div>
@@ -179,6 +179,8 @@ import type { ComponentInstance } from "../types";
 const isResizing = ref(false);
 let startX = 0;
 let startWidth = 0;
+let startY = 0;
+let startHeight = 0;
 const props = defineProps<{ component: ComponentInstance; depth: number }>();
 const store = useEditorStore();
 const isDragging = ref(false);
@@ -354,33 +356,36 @@ function openIconPicker() {
 }
 
 function startResize(e: MouseEvent) {
-  if (!isLayout.value && !isGrid.value) return;
+  if (!isLayout.value && !isGrid.value && props.component.type !== "table")
+    return;
   e.stopPropagation();
   e.preventDefault();
   isResizing.value = true;
   startX = e.clientX;
-  startWidth = props.component.style?.width
-    ? parseInt(props.component.style.width, 10)
-    : props.component.type === "layout" || props.component.type === "grid"
-    ? 100
-    : 0; // 默认100%时用100
-
-  // 若当前宽度为百分比，则无法直接计算像素，简化处理：使用当前实际宽度
+  startY = e.clientY; // 新增
   const el = (e.target as HTMLElement).closest(".canvas-item");
   if (el) {
-    startWidth = el.getBoundingClientRect().width;
+    const rect = el.getBoundingClientRect();
+    startWidth = rect.width;
+    startHeight = rect.height; // 新增
+  } else {
+    startWidth = 100;
+    startHeight = 50;
   }
-
   document.addEventListener("mousemove", onResizeMove);
   document.addEventListener("mouseup", onResizeEnd);
 }
 
 function onResizeMove(e: MouseEvent) {
   if (!isResizing.value) return;
-  const delta = e.clientX - startX;
-  const newWidth = Math.max(100, startWidth + delta); // 最小宽度100px
-  // 更新组件样式宽度（像素）
-  store.updateStyle(props.component.id, { width: newWidth + "px" });
+  const deltaX = e.clientX - startX;
+  const deltaY = e.clientY - startY;
+  const newWidth = Math.max(50, startWidth + deltaX);
+  const newHeight = Math.max(30, startHeight + deltaY);
+  store.updateStyle(props.component.id, {
+    width: newWidth + "px",
+    height: newHeight + "px",
+  });
 }
 
 function onResizeEnd() {

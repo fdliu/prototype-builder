@@ -220,7 +220,7 @@ export const componentList: ComponentConfig[] = [
       cellColor: "#333333",
       cellPadding: "8px",
     },
-    defaultStyle: { ...defaultCommonStyle, width: "400px" },
+    defaultStyle: { ...defaultCommonStyle, width: "400px", height: "200px" },
     propsConfig: [
       { key: "columns", label: "列定义（支持对象数组）", type: "textarea" },
       { key: "data", label: "数据（支持对象数组）", type: "textarea" },

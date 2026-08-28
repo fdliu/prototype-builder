@@ -1,5 +1,5 @@
 <template>
-  <el-table :data="tableData" border style="width: 100%">
+  <el-table :data="tableData" border style="width: 100%" :height="tableHeight">
     <el-table-column v-for="(col, index) in parsedColumns" :key="index">
       <!-- 表头插槽 -->
       <template #header>
@@ -160,6 +160,11 @@ function getCellLink(row: any, colIndex: number): string {
   }
   return "";
 }
+
+const tableHeight = computed(() => {
+  const h = props.props.height;
+  return h ? parseInt(h, 10) : undefined;
+});
 
 const headerStyle = computed(() => {
   const p = props.props;

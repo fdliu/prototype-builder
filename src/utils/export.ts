@@ -231,7 +231,9 @@ function componentToHTML(comp: ComponentInstance): string {
         rows = dataRaw;
       }
 
-      let tableHTML = `<div style="${styleStr}"><table class="table" style="border-collapse:collapse; width:100%;">`;
+      let tableHTML = `<div style="${styleStr}" height:${
+        p.height || "auto"
+      }; overflow:auto;"><table class="table" style="border-collapse:collapse; width:100%;">`;
       tableHTML += `<thead><tr>`;
       columns.forEach((col) => {
         const linkAttr = col.link ? ` href="${col.link}" target="_blank"` : "";
