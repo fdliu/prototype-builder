@@ -176,24 +176,102 @@ function componentToHTML(comp: ComponentInstance): string {
     }
 
     case "table": {
-      const columns = p.columns;
-      const data = p.data;
-      let tableHTML = `<div style="${styleStr}"><table class="table"><thead><tr>`;
-      if (Array.isArray(columns))
-        columns.forEach((col: string) => (tableHTML += `<th>${col}</th>`));
-      else if (typeof columns === "string")
-        columns
-          .split(",")
-          .forEach((col: string) => (tableHTML += `<th>${col.trim()}</th>`));
-      tableHTML += "</tr></thead><tbody>";
-      if (Array.isArray(data)) {
-        data.forEach((row: any[]) => {
-          tableHTML += "<tr>";
-          row.forEach((cell) => (tableHTML += `<td>${cell}</td>`));
-          tableHTML += "</tr>";
+      const p = comp.props;
+      const styleStr = getStyleString(comp);
+      // 解析列定义
+      let columns: Array<{ label: string; link: string }> = [];
+      const colsRaw = p.columns;
+      if (Array.isArray(colsRaw)) {
+        columns = colsRaw.map((col: any) => {
+          if (typeof col === "string") return { label: col, link: "" };
+          if (typeof col === "object")
+            return { label: col.label || "", link: col.link || "" };
+          return { label: String(col), link: "" };
         });
+      } else if (typeof colsRaw === "string") {
+        try {
+          const parsed = JSON.parse(colsRaw);
+          if (Array.isArray(parsed)) {
+            columns = parsed.map((item: any) => {
+              if (typeof item === "string") return { label: item, link: "" };
+              if (typeof item === "object")
+                return { label: item.label || "", link: item.link || "" };
+              return { label: String(item), link: "" };
+            });
+          }
+        } catch (e) {
+          columns = colsRaw
+            .split(",")
+            .map((s: string) => ({ label: s.trim(), link: "" }))
+            .filter((c) => c.label);
+        }
       }
-      tableHTML += "</tbody></table></div>";
+
+      // 解析数据
+      let rows: any[][] = [];
+      const dataRaw = p.data;
+      if (typeof dataRaw === "string") {
+        try {
+          const parsed = JSON.parse(dataRaw);
+          if (Array.isArray(parsed)) {
+            rows = parsed.map((row: any) => {
+              if (Array.isArray(row)) return row;
+              if (typeof row === "object")
+                return Object.values(row).map((v) => v);
+              return [];
+            });
+          }
+        } catch (e) {
+          rows = dataRaw
+            .split("\n")
+            .filter((row) => row.trim() !== "")
+            .map((row) => row.split(",").map((cell) => cell.trim()));
+        }
+      } else if (Array.isArray(dataRaw)) {
+        rows = dataRaw;
+      }
+
+      let tableHTML = `<div style="${styleStr}"><table class="table" style="border-collapse:collapse; width:100%;">`;
+      tableHTML += `<thead><tr>`;
+      columns.forEach((col) => {
+        const linkAttr = col.link ? ` href="${col.link}" target="_blank"` : "";
+        const tag = col.link ? "a" : "span";
+        tableHTML += `<th style="font-size:${p.headerFontSize || 14}px; color:${
+          p.headerColor || "#333"
+        }; background:${p.headerBackground || "#f5f7fa"}; padding:${
+          p.headerPadding || "8px"
+        };"><${tag}${linkAttr} style="color:${
+          p.headerColor || "#333"
+        }; text-decoration:none;">${col.label}</${tag}></th>`;
+      });
+      tableHTML += `</tr></thead><tbody>`;
+      rows.forEach((row: any[]) => {
+        tableHTML += "<tr>";
+        row.forEach((cell: any, colIndex: number) => {
+          let text = "";
+          let link = "";
+          if (cell && typeof cell === "object") {
+            text = cell.text || "";
+            link = cell.link || "";
+          } else {
+            text = String(cell ?? "");
+            if (text.startsWith("http://") || text.startsWith("https://")) {
+              link = text;
+            }
+          }
+          const linkAttr = link ? ` href="${link}" target="_blank"` : "";
+          const tag = link ? "a" : "span";
+          tableHTML += `<td style="font-size:${p.cellFontSize || 14}px; color:${
+            p.cellColor || "#333"
+          }; padding:${
+            p.cellPadding || "8px"
+          };"><${tag}${linkAttr} style="color:${
+            p.cellColor || "#333"
+          }; text-decoration:none;">${text}</${tag}></td>`;
+        });
+        tableHTML += "</tr>";
+      });
+      tableHTML += `</tbody></table></div>`;
       return tableHTML;
     }
 

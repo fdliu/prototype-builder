@@ -10,23 +10,48 @@
           <el-form-item label="组件类型">
             <el-input :model-value="selectedComponent.type" disabled />
           </el-form-item>
-          <el-form-item v-for="field in currentPropsConfig" :key="field.key" :label="field.label">
+          <el-form-item
+            v-for="field in currentPropsConfig"
+            :key="field.key"
+            :label="field.label"
+          >
             <div v-if="field.type === 'input'">
-                <el-input :model-value="selectedComponent.props[field.key]" @update:model-value="updateProp(field.key, $event)" />
-                <el-button v-if="field.key === 'iconName'" size="small" @click="openIconPicker">选择图标</el-button>
+              <el-input
+                :model-value="selectedComponent.props[field.key]"
+                @update:model-value="updateProp(field.key, $event)"
+              />
+              <el-button
+                v-if="field.key === 'iconName'"
+                size="small"
+                @click="openIconPicker"
+                >选择图标</el-button
+              >
             </div>
-            <el-input v-else-if="field.type === 'textarea'" type="textarea"
-              :model-value="selectedComponent.props[field.key]"
-              @update:model-value="updateProp(field.key, $event)" />
-            <el-select v-else-if="field.type === 'select'"
-              :model-value="selectedComponent.props[field.key]"
-              @update:model-value="updateProp(field.key, $event)">
-              <el-option v-for="opt in field.options" :key="opt" :label="opt" :value="opt" />
-            </el-select>
-            <el-input-number v-else-if="field.type === 'number'"
+            <el-input
+              v-else-if="field.type === 'textarea'"
+              type="textarea"
               :model-value="selectedComponent.props[field.key]"
               @update:model-value="updateProp(field.key, $event)"
-              :min="0" :max="24" />
+            />
+            <el-select
+              v-else-if="field.type === 'select'"
+              :model-value="selectedComponent.props[field.key]"
+              @update:model-value="updateProp(field.key, $event)"
+            >
+              <el-option
+                v-for="opt in field.options"
+                :key="opt"
+                :label="opt"
+                :value="opt"
+              />
+            </el-select>
+            <el-input-number
+              v-else-if="field.type === 'number'"
+              :model-value="selectedComponent.props[field.key]"
+              @update:model-value="updateProp(field.key, $event)"
+              :min="0"
+              :max="24"
+            />
           </el-form-item>
         </el-form>
 
@@ -41,9 +66,15 @@
           </div>
           <div class="fields-header">
             <span>字段配置</span>
-            <el-button size="small" type="primary" @click="addField">+ 添加字段</el-button>
+            <el-button size="small" type="primary" @click="addField"
+              >+ 添加字段</el-button
+            >
           </div>
-          <div v-for="(field, index) in formFields" :key="index" class="field-item">
+          <div
+            v-for="(field, index) in formFields"
+            :key="index"
+            class="field-item"
+          >
             <el-input
               v-model="field.label"
               placeholder="字段名称"
@@ -66,11 +97,7 @@
               class="field-options-input"
               @change="syncFormFields"
             />
-            <el-button
-              size="small"
-              type="danger"
-              @click="removeField(index)"
-            >
+            <el-button size="small" type="danger" @click="removeField(index)">
               删除
             </el-button>
           </div>
@@ -80,15 +107,24 @@
       <!-- 样式 Tab -->
       <el-tab-pane label="样式">
         <el-form label-width="90px">
-          <el-form-item v-for="field in currentStyleConfig" :key="field.key" :label="field.label">
-            <el-input v-if="field.type === 'input'"
+          <el-form-item
+            v-for="field in currentStyleConfig"
+            :key="field.key"
+            :label="field.label"
+          >
+            <el-input
+              v-if="field.type === 'input'"
               :model-value="getStyleValue(field.key)"
               @update:model-value="updateStyle(field.key, $event)"
-              placeholder="如: 100px 或 50%" />
-            <el-input-number v-else-if="field.type === 'number'"
+              placeholder="如: 100px 或 50%"
+            />
+            <el-input-number
+              v-else-if="field.type === 'number'"
               :model-value="Number(getStyleValue(field.key) || 0)"
               @update:model-value="updateStyle(field.key, $event)"
-              :min="0" :max="500" />
+              :min="0"
+              :max="500"
+            />
           </el-form-item>
         </el-form>
       </el-tab-pane>
@@ -97,25 +133,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-import { useEditorStore } from '../stores/editor';
-import { componentList } from '../config/componentConfig';
+import { ref, computed, watch } from "vue";
+import { useEditorStore } from "../stores/editor";
+import { componentList } from "../config/componentConfig";
 
 const store = useEditorStore();
 const selectedComponent = computed(() => store.selectedComponent);
 
 const currentPropsConfig = computed(() => {
   if (!selectedComponent.value) return [];
-  const config = componentList.find(c => c.type === selectedComponent.value!.type);
+  const config = componentList.find(
+    (c) => c.type === selectedComponent.value!.type
+  );
   return config?.propsConfig || [];
 });
 const currentStyleConfig = computed(() => {
   if (!selectedComponent.value) return [];
-  const config = componentList.find(c => c.type === selectedComponent.value!.type);
+  const config = componentList.find(
+    (c) => c.type === selectedComponent.value!.type
+  );
   return config?.styleConfig || [];
 });
 
-const isForm = computed(() => selectedComponent.value?.type === 'form');
+const isForm = computed(() => selectedComponent.value?.type === "form");
 
 // 表单字段列表（本地状态）
 interface FormFieldItem {
@@ -124,7 +164,7 @@ interface FormFieldItem {
   optionsText: string;
 }
 const formFields = ref<FormFieldItem[]>([]);
-  const labelPosition = ref('left');
+const labelPosition = ref("left");
 
 // 在 watch 中初始化 labelPosition
 watch(
@@ -132,18 +172,21 @@ watch(
   () => {
     if (isForm.value && selectedComponent.value) {
       formFields.value = parseFormFields(selectedComponent.value.props);
-      labelPosition.value = selectedComponent.value.props.labelPosition || 'left';
+      labelPosition.value =
+        selectedComponent.value.props.labelPosition || "left";
     } else {
       formFields.value = [];
-      labelPosition.value = 'left';
+      labelPosition.value = "left";
     }
   },
   { immediate: true }
 );
 
 function syncLabelPosition() {
-  if (selectedComponent.value?.type === 'form') {
-    store.updateProps(selectedComponent.value.id, { labelPosition: labelPosition.value });
+  if (selectedComponent.value?.type === "form") {
+    store.updateProps(selectedComponent.value.id, {
+      labelPosition: labelPosition.value,
+    });
   }
 }
 // 监听选中组件变化，初始化表单字段
@@ -162,14 +205,16 @@ watch(
 function parseFormFields(props: Record<string, any>): FormFieldItem[] {
   // 优先从 fieldsConfig 解析
   const config = props.fieldsConfig;
-  if (config && typeof config === 'string') {
+  if (config && typeof config === "string") {
     try {
       const parsed = JSON.parse(config);
       if (Array.isArray(parsed)) {
         return parsed.map((item: any) => ({
-          label: item.label || '字段',
-          type: item.type || 'input',
-          optionsText: Array.isArray(item.options) ? item.options.join(',') : '',
+          label: item.label || "字段",
+          type: item.type || "input",
+          optionsText: Array.isArray(item.options)
+            ? item.options.join(",")
+            : "",
         }));
       }
     } catch (e) {}
@@ -177,10 +222,17 @@ function parseFormFields(props: Record<string, any>): FormFieldItem[] {
   // 回退到 fields 简单模式
   const fields = props.fields;
   if (Array.isArray(fields)) {
-    return fields.map((f: string) => ({ label: f, type: 'input', optionsText: '' }));
+    return fields.map((f: string) => ({
+      label: f,
+      type: "input",
+      optionsText: "",
+    }));
   }
-  if (typeof fields === 'string') {
-    return fields.split(',').map((s: string) => ({ label: s.trim(), type: 'input', optionsText: '' })).filter(f => f.label);
+  if (typeof fields === "string") {
+    return fields
+      .split(",")
+      .map((s: string) => ({ label: s.trim(), type: "input", optionsText: "" }))
+      .filter((f) => f.label);
   }
   return [];
 }
@@ -188,8 +240,8 @@ function parseFormFields(props: Record<string, any>): FormFieldItem[] {
 function addField() {
   formFields.value.push({
     label: `字段${formFields.value.length + 1}`,
-    type: 'input',
-    optionsText: '',
+    type: "input",
+    optionsText: "",
   });
   syncFormFields();
 }
@@ -200,27 +252,33 @@ function removeField(index: number) {
 }
 
 function syncFormFields() {
-  if (!selectedComponent.value || selectedComponent.value.type !== 'form') return;
-  const fields = formFields.value.map(f => ({
+  if (!selectedComponent.value || selectedComponent.value.type !== "form")
+    return;
+  const fields = formFields.value.map((f) => ({
     label: f.label,
     type: f.type,
-    options: f.optionsText ? f.optionsText.split(',').map(s => s.trim()).filter(s => s) : [],
+    options: f.optionsText
+      ? f.optionsText
+          .split(",")
+          .map((s) => s.trim())
+          .filter((s) => s)
+      : [],
   }));
   store.updateProps(selectedComponent.value.id, {
     fieldsConfig: JSON.stringify(fields),
-    fields: fields.map(f => f.label).join(','),
+    fields: fields.map((f) => f.label).join(","),
   });
 }
 
 function getStyleValue(key: string): string {
-  if (!selectedComponent.value) return '';
-  return selectedComponent.value.style?.[key] || '';
+  if (!selectedComponent.value) return "";
+  return selectedComponent.value.style?.[key] || "";
 }
 
 function updateProp(key: string, value: any) {
   if (!selectedComponent.value) return;
   const updates: Record<string, any> = { [key]: value };
-  if (key === 'columns' && selectedComponent.value.type === 'grid') {
+  if (key === "columns" && selectedComponent.value.type === "grid") {
     const cols = Number(value) || 2;
     const span = Math.floor(24 / cols);
     const remainder = 24 - span * cols;
@@ -244,7 +302,7 @@ function openIconPicker() {
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .property-panel {
   width: 100%;
   box-sizing: border-box;
@@ -253,8 +311,18 @@ function openIconPicker() {
   padding-right: 35px;
   border-left: 1px solid #e0e0e0;
   overflow-y: auto;
+
+  :deep(.el-form-item__label) {
+    align-items: center;
+    font-size: 12px;
+    line-height: 1.3;
+  }
 }
-.no-selection { color: #999; text-align: center; margin-top: 40px; }
+.no-selection {
+  color: #999;
+  text-align: center;
+  margin-top: 40px;
+}
 
 .form-fields-editor {
   padding: 8px 0;
