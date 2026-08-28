@@ -271,10 +271,10 @@ function generateId(): string {
   overflow-y: auto;
   position: relative;
   user-select: none;
-  display: flex;
-  flex-wrap: wrap;
+  display: inline-table;
+  /* flex-wrap: wrap;
   align-items: flex-start;
-  gap: 10px;
+  gap: 10px; */
 }
 .empty-tip {
   color: #999;

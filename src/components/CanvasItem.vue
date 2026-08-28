@@ -112,6 +112,7 @@
           <el-col v-for="(span, index) in colSpans" :key="index" :span="span">
             <div
               class="grid-col-area"
+              :style="getGridColStyle()"
               @dragover.prevent.stop
               @drop.prevent.stop="handleDropToCol(index, $event)"
             >
@@ -156,17 +157,28 @@
       <div v-else>
         <component :is="getRenderer(component.type)" :props="component.props" />
       </div>
+
+      <!-- 缩放手柄（仅容器组件显示） -->
+      <div
+        v-if="isLayout || isGrid"
+        class="resize-handle"
+        @mousedown.stop="startResize"
+      ></div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, onBeforeUnmount } from "vue";
 import { useEditorStore } from "../stores/editor";
 import { getRenderer } from "./renderer";
 import { componentList } from "../config/componentConfig";
 import type { ComponentInstance } from "../types";
 
+// 缩放相关
+const isResizing = ref(false);
+let startX = 0;
+let startWidth = 0;
 const props = defineProps<{ component: ComponentInstance; depth: number }>();
 const store = useEditorStore();
 const isDragging = ref(false);
@@ -340,6 +352,68 @@ function generateId(): string {
 function openIconPicker() {
   store.openIconPicker(props.component.id);
 }
+
+function startResize(e: MouseEvent) {
+  if (!isLayout.value && !isGrid.value) return;
+  e.stopPropagation();
+  e.preventDefault();
+  isResizing.value = true;
+  startX = e.clientX;
+  startWidth = props.component.style?.width
+    ? parseInt(props.component.style.width, 10)
+    : props.component.type === "layout" || props.component.type === "grid"
+    ? 100
+    : 0; // 默认100%时用100
+
+  // 若当前宽度为百分比，则无法直接计算像素，简化处理：使用当前实际宽度
+  const el = (e.target as HTMLElement).closest(".canvas-item");
+  if (el) {
+    startWidth = el.getBoundingClientRect().width;
+  }
+
+  document.addEventListener("mousemove", onResizeMove);
+  document.addEventListener("mouseup", onResizeEnd);
+}
+
+function onResizeMove(e: MouseEvent) {
+  if (!isResizing.value) return;
+  const delta = e.clientX - startX;
+  const newWidth = Math.max(100, startWidth + delta); // 最小宽度100px
+  // 更新组件样式宽度（像素）
+  store.updateStyle(props.component.id, { width: newWidth + "px" });
+}
+
+function onResizeEnd() {
+  isResizing.value = false;
+  document.removeEventListener("mousemove", onResizeMove);
+  document.removeEventListener("mouseup", onResizeEnd);
+}
+
+function getGridColStyle(): Record<string, string> {
+  const alignMap: Record<string, string> = {
+    top: "flex-start",
+    middle: "center",
+    bottom: "flex-end",
+  };
+  const justifyMap: Record<string, string> = {
+    left: "flex-start",
+    center: "center",
+    right: "flex-end",
+  };
+  const colAlign = props.component.props?.colAlign || "top";
+  const colJustify = props.component.props?.colJustify || "left";
+  return {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: justifyMap[colJustify] || "flex-start",
+    justifyContent: alignMap[colAlign] || "flex-start",
+  };
+}
+
+onBeforeUnmount(() => {
+  document.removeEventListener("mousemove", onResizeMove);
+  document.removeEventListener("mouseup", onResizeEnd);
+});
 </script>
 
 <style scoped>
@@ -373,15 +447,14 @@ function openIconPicker() {
 /* 工具栏绝对定位，不占用布局空间 */
 .item-toolbar {
   position: absolute;
-  top: 50%;
-  right: -50px;
-  transform: translateY(-50%);
+  top: -35px;
+  right: -125px;
   z-index: 20;
   display: flex;
-  flex-direction: column;
+  flex-direction: row; /* 水平排列 */
   align-items: center;
   gap: 4px;
-  padding: 2px;
+  padding: 2px 4px;
   background: rgba(255, 255, 255, 0.95);
   border-radius: 4px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
@@ -438,10 +511,10 @@ function openIconPicker() {
 }
 /* 全宽组件工具栏移到右上角 */
 .canvas-item.full-width .item-toolbar {
-  top: 4px;
-  right: 4px;
+  top: -35px;
+  right: -125px;
   transform: none;
-  flex-direction: row; /* 可选：水平排列，更紧凑 */
+  flex-direction: row;
   align-items: center;
 }
 .item-toolbar {
@@ -552,5 +625,26 @@ function openIconPicker() {
   border-radius: 4px;
   min-height: 80px;
   padding: 8px;
+}
+.resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  background: transparent;
+  z-index: 30;
+}
+
+.resize-handle::after {
+  content: "";
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid #999;
+  border-bottom: 2px solid #999;
 }
 </style>
