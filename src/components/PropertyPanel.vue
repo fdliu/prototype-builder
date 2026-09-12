@@ -47,10 +47,10 @@
             </el-select>
             <el-input-number
               v-else-if="field.type === 'number'"
-              :model-value="selectedComponent.props[field.key]"
+              :model-value="Number(selectedComponent.props[field.key]) || 0"
               @update:model-value="updateProp(field.key, $event)"
               :min="0"
-              :max="24"
+              :max="200"
             />
           </el-form-item>
         </el-form>

@@ -50,6 +50,18 @@ function componentToHTML(comp: ComponentInstance): string {
         p.showSidebar === "true" ||
         p.showSidebar === true ||
         p.showSidebar === undefined;
+      const headerStyleStr = [
+        `height:${p.headerHeight || "50px"}`,
+        `font-size:${p.headerFontSize || 16}px`,
+        `color:${p.headerColor || "#ffffff"}`,
+        `background:${p.headerBgColor || "#409eff"}`,
+        `padding:${p.headerPadding || "0 16px"}`,
+        `font-weight:${p.headerFontWeight || "bold"}`,
+        `text-align:${p.headerTextAlign || "left"}`,
+        `display:flex`,
+        `align-items:center`,
+      ].join(";");
+
       const sidebarHTML = showSidebar
         ? `<div class="layout-sidebar" style="width:${
             p.sidebarWidth || "200px"
@@ -58,9 +70,9 @@ function componentToHTML(comp: ComponentInstance): string {
            </div>`
         : "";
       return `<div class="layout" style="${styleStr}">
-        <div class="layout-header">${
-          renderSlot(comp.slots?.header) || p.header
-        }</div>
+        <div class="layout-header" style="${headerStyleStr}">${
+        renderSlot(comp.slots?.header) || p.header
+      }</div>
         <div class="layout-body">
           ${sidebarHTML}
           <div class="layout-content">${
@@ -91,12 +103,20 @@ function componentToHTML(comp: ComponentInstance): string {
       };
       const alignItems = justifyMap[colJustify] || "flex-start";
       const justifyContent = alignMap[colAlign] || "flex-start";
-      let gridHTML = `<div class="el-row" style="display:flex; flex-wrap:wrap; gap:${gutter}px; ${styleStr}">`;
+
+      // 使用负边距抵消列内边距，避免 gap 导致换行
+      let gridHTML = `<div class="el-row" style="display:flex; flex-wrap:wrap; margin-left:-${
+        gutter / 2
+      }px; margin-right:-${gutter / 2}px; ${styleStr}">`;
       spans.forEach((span: number, index: number) => {
         const width = (span / 24) * 100;
         const colContent = renderSlot(comp.slots?.[`col_${index}`]);
-        gridHTML += `<div class="el-col" style="flex:0 0 calc(${width}% - ${gutter}px); background:#f5f7fa; border:1px dashed #dcdfe6; border-radius:4px; padding:10px; min-height:60px; display:flex; flex-direction:column; align-items:${alignItems}; justify-content:${justifyContent};">
-          ${colContent || `列 ${index + 1}`}
+        gridHTML += `<div class="el-col" style="flex:0 0 ${width}%; max-width:${width}%; box-sizing:border-box; padding-left:${
+          gutter / 2
+        }px; padding-right:${gutter / 2}px;">
+          <div style="background:#f5f7fa; border:1px dashed #dcdfe6; border-radius:4px; padding:10px; min-height:60px; display:flex; flex-direction:column; align-items:${alignItems}; justify-content:${justifyContent};">
+            ${colContent || `列 ${index + 1}`}
+          </div>
         </div>`;
       });
       gridHTML += "</div>";

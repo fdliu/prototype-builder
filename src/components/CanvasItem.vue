@@ -7,12 +7,12 @@
       class="canvas-item"
       :class="{
         selected:
-          store.selectedId === component.id ||
-          store.multiSelectedIds.includes(component.id),
+          store.selectedId === liveComponent.id ||
+          store.multiSelectedIds.includes(liveComponent.id),
         'is-container': isLayout || isGrid,
         'full-width': isFullWidth,
       }"
-      @click.stop="store.select(component.id)"
+      @click.stop="store.select(liveComponent.id)"
       :style="componentStyle"
       draggable="true"
       @dragstart="onDragStart"
@@ -20,24 +20,29 @@
       @dragover.prevent.stop="onDragOver"
       @drop.prevent="onDropToSelf"
     >
-      <div class="item-toolbar" v-if="store.selectedId === component.id">
+      <div class="item-toolbar" v-if="store.selectedId === liveComponent.id">
         <span class="drag-handle" @mousedown.stop>⋮⋮</span>
-        <span class="item-type">{{ component.type }}</span>
+        <span class="item-type">{{ liveComponent.type }}</span>
         <button
-          v-if="component.type === 'icon'"
+          v-if="liveComponent.type === 'icon'"
           @click.stop="openIconPicker"
           style="font-size: 8px"
         >
           换图标
         </button>
-        <button @click.stop="store.copyComponent(component.id)">复制</button>
-        <button @click.stop="store.removeComponent(component.id)">删除</button>
+        <button @click.stop="store.copyComponent(liveComponent.id)">
+          复制
+        </button>
+        <button @click.stop="store.removeComponent(liveComponent.id)">
+          删除
+        </button>
       </div>
 
       <!-- Layout 容器 -->
       <div v-if="isLayout" class="layout-editor">
         <div
           class="slot-area slot-header"
+          :style="headerSlotStyle"
           @dragover.prevent.stop
           @drop.prevent.stop="handleDropToSlot('header', $event)"
         >
@@ -56,7 +61,7 @@
           <div
             v-if="showSidebar"
             class="slot-area slot-sidebar"
-            :style="{ width: component.props.sidebarWidth || '200px' }"
+            :style="{ width: liveComponent.props.sidebarWidth || '200px' }"
             @dragover.prevent.stop
             @drop.prevent.stop="handleDropToSlot('sidebar', $event)"
           >
@@ -155,12 +160,15 @@
 
       <!-- 普通组件 -->
       <div v-else>
-        <component :is="getRenderer(component.type)" :props="component.props" />
+        <component
+          :is="getRenderer(liveComponent.type)"
+          :props="liveComponent.props"
+        />
       </div>
 
       <!-- 缩放手柄（仅容器组件显示） -->
       <div
-        v-if="isLayout || isGrid || component.type === 'table'"
+        v-if="isLayout || isGrid || liveComponent.type === 'table'"
         class="resize-handle"
         @mousedown.stop="startResize"
       ></div>
@@ -185,21 +193,24 @@ const props = defineProps<{ component: ComponentInstance; depth: number }>();
 const store = useEditorStore();
 const isDragging = ref(false);
 
-const isLayout = computed(() => props.component.type === "layout");
-const isGrid = computed(() => props.component.type === "grid");
-const isDialog = computed(() => props.component.type === "dialog");
+const liveComponent = computed(() => {
+  return store.findComponentById(props.component.id) || props.component;
+});
+const isLayout = computed(() => liveComponent.value.type === "layout");
+const isGrid = computed(() => liveComponent.value.type === "grid");
+const isDialog = computed(() => liveComponent.value.type === "dialog");
 
 const showSidebar = computed(() => {
-  const val = props.component.props?.showSidebar;
+  const val = liveComponent.value.props?.showSidebar;
   if (val === undefined || val === null) return true;
   return val === "true" || val === true;
 });
 
-const gutter = computed(() => Number(props.component.props?.gutter) || 0);
+const gutter = computed(() => Number(liveComponent.value.props?.gutter) || 0);
 
 const colSpans = computed(() => {
-  const cols = Number(props.component.props?.columns) || 2;
-  const spans = props.component.props?.colSpans;
+  const cols = Number(liveComponent.value.props?.columns) || 2;
+  const spans = liveComponent.value.props?.colSpans;
   let spanArray: number[] = [];
   if (Array.isArray(spans)) spanArray = spans.map(Number);
   else if (typeof spans === "string" && spans.trim())
@@ -214,7 +225,7 @@ const colSpans = computed(() => {
 });
 
 const componentStyle = computed(() => {
-  const style = props.component.style || {};
+  const style = liveComponent.value.style || {};
   const cssStyle: Record<string, string> = {};
   if (style.width) cssStyle.width = style.width;
   if (style.height) cssStyle.height = style.height;
@@ -231,24 +242,24 @@ const componentStyle = computed(() => {
 
 const isFullWidth = computed(() => {
   if (isLayout.value || isGrid.value) return true;
-  const width = props.component.style?.width;
+  const width = liveComponent.value.style?.width;
   return width === "100%" || width === "100%" || width === "100%";
 });
 
 function getSlotComponents(slotName: string): ComponentInstance[] {
-  if (!props.component.slots) return [];
-  return props.component.slots[slotName] || [];
+  if (!liveComponent.value.slots) return [];
+  return liveComponent.value.slots[slotName] || [];
 }
 function getColComponents(colIndex: number): ComponentInstance[] {
-  if (!props.component.slots) return [];
-  return props.component.slots[`col_${colIndex}`] || [];
+  if (!liveComponent.value.slots) return [];
+  return liveComponent.value.slots[`col_${colIndex}`] || [];
 }
 
 function onDragStart(e: DragEvent) {
   e.stopPropagation();
   isDragging.value = true;
   if (e.dataTransfer) {
-    e.dataTransfer.setData("moveComponentId", props.component.id);
+    e.dataTransfer.setData("moveComponentId", liveComponent.value.id);
     e.dataTransfer.effectAllowed = "move";
   }
 }
@@ -261,20 +272,20 @@ function onDragOver(e: DragEvent) {
 
 function onDropToSelf(e: DragEvent) {
   const moveId = e.dataTransfer?.getData("moveComponentId");
-  if (moveId && moveId !== props.component.id) {
+  if (moveId && moveId !== liveComponent.value.id) {
     // 移动已有组件的逻辑
     const sourceIndex = store.components.findIndex((c) => c.id === moveId);
     const targetIndex = store.components.findIndex(
-      (c) => c.id === props.component.id
+      (c) => c.id === liveComponent.value.id
     );
     if (sourceIndex !== -1 && targetIndex !== -1) {
       if (sourceIndex < targetIndex) {
-        store.moveComponentAfter(moveId, props.component.id);
+        store.moveComponentAfter(moveId, liveComponent.value.id);
       } else {
-        store.moveComponentBefore(moveId, props.component.id);
+        store.moveComponentBefore(moveId, liveComponent.value.id);
       }
     } else {
-      store.swapComponents(moveId, props.component.id);
+      store.swapComponents(moveId, liveComponent.value.id);
     }
   }
   // 不处理 newType，也不 stopPropagation，让事件冒泡到画布容器
@@ -306,10 +317,10 @@ function handleDropToSlot(slotName: string, e: DragEvent) {
   const moveId = e.dataTransfer?.getData("moveComponentId");
   const newType = e.dataTransfer?.getData("componentType");
   if (moveId) {
-    store.moveComponentToSlot(moveId, props.component.id, slotName);
+    store.moveComponentToSlot(moveId, liveComponent.value.id, slotName);
   } else if (newType) {
     const newComp = createComponent(newType);
-    store.addComponent(newComp, props.component.id, slotName);
+    store.addComponent(newComp, liveComponent.value.id, slotName);
   }
 }
 
@@ -318,10 +329,10 @@ function handleDropToCol(colIndex: number, e: DragEvent) {
   const moveId = e.dataTransfer?.getData("moveComponentId");
   const newType = e.dataTransfer?.getData("componentType");
   if (moveId) {
-    store.moveComponentToSlot(moveId, props.component.id, slotName);
+    store.moveComponentToSlot(moveId, liveComponent.value.id, slotName);
   } else if (newType) {
     const newComp = createComponent(newType);
-    store.addComponent(newComp, props.component.id, slotName);
+    store.addComponent(newComp, liveComponent.value.id, slotName);
   }
 }
 
@@ -352,11 +363,11 @@ function generateId(): string {
 }
 
 function openIconPicker() {
-  store.openIconPicker(props.component.id);
+  store.openIconPicker(liveComponent.value.id);
 }
 
 function startResize(e: MouseEvent) {
-  if (!isLayout.value && !isGrid.value && props.component.type !== "table")
+  if (!isLayout.value && !isGrid.value && liveComponent.value.type !== "table")
     return;
   e.stopPropagation();
   e.preventDefault();
@@ -382,7 +393,7 @@ function onResizeMove(e: MouseEvent) {
   const deltaY = e.clientY - startY;
   const newWidth = Math.max(50, startWidth + deltaX);
   const newHeight = Math.max(30, startHeight + deltaY);
-  store.updateStyle(props.component.id, {
+  store.updateStyle(liveComponent.value.id, {
     width: newWidth + "px",
     height: newHeight + "px",
   });
@@ -405,8 +416,8 @@ function getGridColStyle(): Record<string, string> {
     center: "center",
     right: "flex-end",
   };
-  const colAlign = props.component.props?.colAlign || "top";
-  const colJustify = props.component.props?.colJustify || "left";
+  const colAlign = liveComponent.value.props?.colAlign || "top";
+  const colJustify = liveComponent.value.props?.colJustify || "left";
   return {
     display: "flex",
     flexDirection: "column",
@@ -414,6 +425,23 @@ function getGridColStyle(): Record<string, string> {
     justifyContent: alignMap[colAlign] || "flex-start",
   };
 }
+
+const headerSlotStyle = computed(() => {
+  const p = liveComponent.value.props || {};
+  return {
+    height: p.headerHeight || "50px",
+    minHeight: p.headerHeight || "50px",
+    fontSize: (p.headerFontSize || 16) + "px",
+    color: p.headerColor || "#ffffff",
+    background: p.headerBgColor || "#409eff",
+    padding: p.headerPadding || "8px 16px",
+    fontWeight: p.headerFontWeight || "bold",
+    textAlign: p.headerTextAlign || "left",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  };
+});
 
 onBeforeUnmount(() => {
   document.removeEventListener("mousemove", onResizeMove);
@@ -572,9 +600,9 @@ onBeforeUnmount(() => {
 .slot-area:hover {
   border-color: #409eff;
 }
-.slot-header {
+/* .slot-header {
   background: #ecf5ff;
-}
+} */
 .slot-sidebar {
   background: #f0f0f0;
   flex-shrink: 0;
