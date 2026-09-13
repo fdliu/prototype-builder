@@ -15,7 +15,24 @@
             :key="field.key"
             :label="field.label"
           >
-            <div v-if="field.type === 'input'">
+            <div
+              v-if="
+                field.key === 'labelPrefixIcon' ||
+                field.key === 'labelSuffixIcon'
+              "
+              style="display: flex; gap: 4px; width: 100%"
+            >
+              <el-input
+                :model-value="selectedComponent.props[field.key]"
+                @update:model-value="updateProp(field.key, $event)"
+                style="flex: 1"
+                placeholder="图标名，如 User"
+              />
+              <el-button size="small" @click="openIconPickerFor(field.key)"
+                >选择</el-button
+              >
+            </div>
+            <div v-else-if="field.type === 'input'">
               <el-input
                 :model-value="selectedComponent.props[field.key]"
                 @update:model-value="updateProp(field.key, $event)"
@@ -138,7 +155,17 @@ import { useEditorStore } from "../stores/editor";
 import { componentList } from "../config/componentConfig";
 
 const store = useEditorStore();
+const pendingIconField = ref("");
+
 const selectedComponent = computed(() => store.selectedComponent);
+
+function openIconPickerFor(key: string) {
+  if (selectedComponent.value) {
+    // 记录当前要设置的字段
+    pendingIconField.value = key;
+    store.openIconPicker(selectedComponent.value.id, key);
+  }
+}
 
 const currentPropsConfig = computed(() => {
   if (!selectedComponent.value) return [];

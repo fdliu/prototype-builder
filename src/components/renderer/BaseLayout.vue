@@ -2,14 +2,14 @@
   <div class="base-layout">
     <div class="layout-header" :style="headerStyle">
       <slot name="header">
-        <span>{{ props.header }}</span>
+        <span>{{ props.props.header }}</span>
       </slot>
     </div>
     <div class="layout-body">
       <div
         v-if="showSidebar"
         class="layout-sidebar"
-        :style="{ width: props.sidebarWidth || '200px' }"
+        :style="{ width: props.props.sidebarWidth || '200px' }"
       >
         <slot name="sidebar">
           <div class="sidebar-item">菜单项 1</div>
@@ -40,9 +40,14 @@ const showSidebar = computed(() => {
   if (val === undefined || val === null) return true;
   return val === "true" || val === true;
 });
-
 const headerStyle = computed(() => {
   const p = props.props;
+  const alignMap: Record<string, string> = {
+    left: "flex-start",
+    center: "center",
+    right: "flex-end",
+  };
+  const justify = alignMap[p.headerTextAlign || "left"] || "flex-start";
   return {
     height: p.headerHeight || "50px",
     fontSize: (p.headerFontSize || 16) + "px",
@@ -50,9 +55,9 @@ const headerStyle = computed(() => {
     background: p.headerBgColor || "#409eff",
     padding: p.headerPadding || "0 16px",
     fontWeight: p.headerFontWeight || "bold",
-    textAlign: p.headerTextAlign || "left",
     display: "flex",
     alignItems: "center",
+    justifyContent: justify,
   };
 });
 </script>

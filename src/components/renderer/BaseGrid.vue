@@ -66,7 +66,7 @@ function getGridColStyle(): Record<string, string> {
 
 <style scoped>
 .grid-col-placeholder {
-  background: #f5f7fa;
+  /* background: #f5f7fa; */
   border: 1px dashed #dcdfe6;
   border-radius: 4px;
   padding: 20px;

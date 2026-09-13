@@ -1,7 +1,26 @@
 import type { ComponentInstance } from "../types";
-
+import * as Icons from "@element-plus/icons-vue";
+import { h, render } from "vue";
 // ========== 工具函数 ==========
+function iconToSVGString(iconName: string): string {
+  if (!iconName) return "";
+  let IconComp = (Icons as any)[iconName];
+  if (!IconComp) {
+    const pascal = iconName.charAt(0).toUpperCase() + iconName.slice(1);
+    IconComp = (Icons as any)[pascal];
+  }
+  if (!IconComp) return "";
 
+  // 创建一个临时容器，渲染组件为 DOM
+  const container = document.createElement("div");
+  const vnode = h(IconComp);
+  render(vnode, container);
+  // 获取渲染后的 SVG HTML
+  const html = container.innerHTML;
+  // 清理
+  render(null, container);
+  return html;
+}
 function getStyleString(comp: ComponentInstance): string {
   const style = comp.style || {};
   const cssParts: string[] = [];
@@ -50,6 +69,13 @@ function componentToHTML(comp: ComponentInstance): string {
         p.showSidebar === "true" ||
         p.showSidebar === true ||
         p.showSidebar === undefined;
+      const alignMap: Record<string, string> = {
+        left: "flex-start",
+        center: "center",
+        right: "flex-end",
+      };
+      const justify = alignMap[p.headerTextAlign || "left"] || "flex-start";
+
       const headerStyleStr = [
         `height:${p.headerHeight || "50px"}`,
         `font-size:${p.headerFontSize || 16}px`,
@@ -57,9 +83,9 @@ function componentToHTML(comp: ComponentInstance): string {
         `background:${p.headerBgColor || "#409eff"}`,
         `padding:${p.headerPadding || "0 16px"}`,
         `font-weight:${p.headerFontWeight || "bold"}`,
-        `text-align:${p.headerTextAlign || "left"}`,
         `display:flex`,
         `align-items:center`,
+        `justify-content:${justify}`,
       ].join(";");
 
       const sidebarHTML = showSidebar
@@ -114,7 +140,7 @@ function componentToHTML(comp: ComponentInstance): string {
         gridHTML += `<div class="el-col" style="flex:0 0 ${width}%; max-width:${width}%; box-sizing:border-box; padding-left:${
           gutter / 2
         }px; padding-right:${gutter / 2}px;">
-          <div style="background:#f5f7fa; border:1px dashed #dcdfe6; border-radius:4px; padding:10px; min-height:60px; display:flex; flex-direction:column; align-items:${alignItems}; justify-content:${justifyContent};">
+          <div style="display:flex; flex-direction:column; align-items:${alignItems}; justify-content:${justifyContent};">
             ${colContent || `列 ${index + 1}`}
           </div>
         </div>`;
@@ -143,19 +169,67 @@ function componentToHTML(comp: ComponentInstance): string {
     }
 
     // ---------- 基础组件 ----------
-    case "button":
+    case "button": {
+      const isTextLink = p.type === "text" && p.link;
+      if (isTextLink) {
+        const target = p.target || "_self";
+        const linkStyle = [
+          `color:${p.linkColor || "#409eff"}`,
+          `font-size:${p.linkFontSize || 14}px`,
+          `font-weight:${p.linkFontWeight || "normal"}`,
+          `text-decoration:${p.linkTextDecoration || "none"}`,
+          `cursor:pointer`,
+        ].join(";");
+        return `<div style="${styleStr}"><a href="${p.link}" target="${target}" style="${linkStyle}">${p.text}</a></div>`;
+      }
+      if (p.type === "text") {
+        const textStyle = [
+          `color:${p.linkColor || "#409eff"}`,
+          `font-size:${p.linkFontSize || 14}px`,
+          `font-weight:${p.linkFontWeight || "normal"}`,
+          `text-decoration:${p.linkTextDecoration || "none"}`,
+          `background:none`,
+          `border:none`,
+          `cursor:pointer`,
+          `padding:0`,
+        ].join(";");
+        return `<div style="${styleStr}"><button style="${textStyle}">${p.text}</button></div>`;
+      }
       return `<div style="${styleStr}"><button class="btn btn-${p.type}">${p.text}</button></div>`;
+    }
 
     case "input": {
       const labelPosition = p.labelPosition || "left";
+      const prefixIcon = p.labelPrefixIcon
+        ? iconToSVGString(p.labelPrefixIcon)
+        : "";
+      const suffixIcon = p.labelSuffixIcon
+        ? iconToSVGString(p.labelSuffixIcon)
+        : "";
+
+      const prefixHTML = prefixIcon
+        ? `<span style="display:inline-flex; align-items:center; margin-right:4px; width:14px; height:14px;">${prefixIcon}</span>`
+        : "";
+      const suffixHTML = suffixIcon
+        ? `<span style="display:inline-flex; align-items:center; margin-left:4px; width:14px; height:14px;">${suffixIcon}</span>`
+        : "";
+      const _w = p.labelWidth + 'px;';
+      const labelHTML = `<label style="width:${_w} display:inline-flex; align-items:center; gap:4px; ${
+        labelPosition === "top"
+          ? "margin-bottom:4px;"
+          : "text-align:right; margin-right:8px; flex-shrink:0;"
+      }">
+    ${prefixHTML}<span>${p.label}</span>${suffixHTML}
+  </label>`;
+
       if (labelPosition === "top") {
         return `<div style="${styleStr}">
-          <label style="display:block; margin-bottom:4px; font-size:14px; color:#606266;">${p.label}</label>
+          ${labelHTML}
           <input placeholder="${p.placeholder}" style="width:100%; padding:8px; border:1px solid #dcdfe6; border-radius:4px;">
         </div>`;
       }
       return `<div style="${styleStr} display:flex; align-items:center;">
-        <label style="width:80px; text-align:right; margin-right:8px; font-size:14px; color:#606266; flex-shrink:0;">${p.label}</label>
+        ${labelHTML}
         <input placeholder="${p.placeholder}" style="flex:1; padding:8px; border:1px solid #dcdfe6; border-radius:4px;">
       </div>`;
     }
@@ -367,13 +441,15 @@ function componentToHTML(comp: ComponentInstance): string {
       return `<div class="card" style="${styleStr}"><div class="card-title">${p.title}</div><div class="card-content">${p.content}</div></div>`;
 
     case "icon": {
-      return `<div style="${styleStr} text-align:center;">
-      <span class="icon-placeholder" data-icon-name="${
-        p.iconName
-      }" style="font-size:${p.size || 24}px; color:${
-        p.color || "#333"
-      };"></span>
-      </div>`;
+      const svg = iconToSVGString(p.iconName);
+      if (svg) {
+        return `<div style="${styleStr} display:inline-flex; align-items:center; justify-content:center; font-size:${
+          p.size || 24
+        }px; color:${p.color || "#333"};">
+            <span style="width:1em; height:1em; display:inline-flex;">${svg}</span>
+          </div>`;
+      }
+      return `<div style="${styleStr}">[图标: ${p.iconName}]</div>`;
     }
 
     case "text": {
@@ -409,8 +485,8 @@ export function generateHTML(components: ComponentInstance[]): string {
 <head>
   <meta charset="UTF-8">
   <title>原型预览</title>
-  <script src="https://unpkg.com/vue@3"></script>
-  <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://unpkg.com/@element-plus/icons-vue/dist/index.iife.js"></script>
   <style>
     body { font-family: sans-serif; padding: 20px; }
     .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
@@ -455,32 +531,50 @@ export function generateHTML(components: ComponentInstance[]): string {
 <body>
 ${bodyContent}
 <script>
-  function showDialog(id) {
-    var mask = document.getElementById(id);
-    if (mask) mask.style.display = 'flex';
-  }
-  function hideDialog(id) {
-    var mask = document.getElementById(id);
-    if (mask) mask.style.display = 'none';
-  }
-  // 替换图标占位
-  document.querySelectorAll('.icon-placeholder').forEach(function(el) {
-    var iconName = el.getAttribute('data-icon-name');
-    if (iconName && window.ElementPlusIconsVue && window.ElementPlusIconsVue[iconName]) {
-      var IconComp = window.ElementPlusIconsVue[iconName];
-      // 创建 Vue 应用挂载图标
-      var container = document.createElement('span');
-      el.parentNode.replaceChild(container, el);
-      Vue.createApp({
-        render() {
-          return Vue.h(IconComp);
+      // 弹窗逻辑
+      function showDialog(id) {
+        var mask = document.getElementById(id);
+        if (mask) mask.style.display = 'flex';
+      }
+      function hideDialog(id) {
+        var mask = document.getElementById(id);
+        if (mask) mask.style.display = 'none';
+      }
+
+      // 图标替换
+      function renderIcons() {
+        if (!window.ElementPlusIconsVue || !window.Vue) {
+          console.warn('图标库或 Vue 未加载');
+          return;
         }
-      }).mount(container);
-    } else {
-      // 回退显示文本
-      el.textContent = '[图标: ' + iconName + ']';
-    }
-  });
+        document.querySelectorAll('.icon-placeholder').forEach(function(el) {
+          var iconName = el.getAttribute('data-icon-name');
+          var Icons = window.ElementPlusIconsVue;
+          var IconComp = Icons[iconName];
+          if (!IconComp) {
+            // 尝试首字母大写
+            var pascal = iconName.charAt(0).toUpperCase() + iconName.slice(1);
+            IconComp = Icons[pascal];
+          }
+          if (IconComp) {
+            var container = document.createElement('span');
+            container.style.display = 'inline-flex';
+            container.style.alignItems = 'center';
+            container.style.verticalAlign = 'middle';
+            el.parentNode.replaceChild(container, el);
+            window.Vue.createApp({
+              render() {
+                return window.Vue.h(IconComp);
+              }
+            }).mount(container);
+          } else {
+            console.warn('图标不存在:', iconName);
+          }
+        });
+      }
+
+      // 页面加载完成后渲染
+      window.addEventListener('load', renderIcons);
 </script>
 </body>
 </html>`;

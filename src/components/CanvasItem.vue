@@ -177,12 +177,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onBeforeUnmount } from "vue";
+import { computed, ref, onBeforeUnmount, provide } from "vue";
 import { useEditorStore } from "../stores/editor";
 import { getRenderer } from "./renderer";
 import { componentList } from "../config/componentConfig";
 import type { ComponentInstance } from "../types";
 
+// 在 setup 中提供编辑态标识
+provide("isEditing", true);
 // 缩放相关
 const isResizing = ref(false);
 let startX = 0;
@@ -428,6 +430,12 @@ function getGridColStyle(): Record<string, string> {
 
 const headerSlotStyle = computed(() => {
   const p = liveComponent.value.props || {};
+  const alignMap: Record<string, string> = {
+    left: "flex-start",
+    center: "center",
+    right: "flex-end",
+  };
+  const justify = alignMap[p.headerTextAlign || "left"] || "flex-start";
   return {
     height: p.headerHeight || "50px",
     minHeight: p.headerHeight || "50px",
@@ -436,9 +444,9 @@ const headerSlotStyle = computed(() => {
     background: p.headerBgColor || "#409eff",
     padding: p.headerPadding || "8px 16px",
     fontWeight: p.headerFontWeight || "bold",
-    textAlign: p.headerTextAlign || "left",
     display: "flex",
     alignItems: "center",
+    justifyContent: justify,
     gap: "8px",
   };
 });

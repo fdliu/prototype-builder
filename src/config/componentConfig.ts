@@ -164,15 +164,47 @@ export const componentList: ComponentConfig[] = [
   {
     type: "button",
     name: "按钮",
-    defaultProps: { text: "按钮", type: "primary" },
-    defaultStyle: { ...defaultBtnCommonStyle },
+    defaultProps: {
+      text: "按钮",
+      type: "primary",
+      link: "",
+      target: "_self",
+      // 新增：文字链接样式
+      linkColor: "#409eff",
+      linkFontSize: 14,
+      linkFontWeight: "normal",
+      linkTextDecoration: "none",
+    },
+    defaultStyle: { ...defaultCommonStyle },
     propsConfig: [
       { key: "text", label: "按钮文字", type: "input" },
       {
         key: "type",
         label: "按钮类型",
         type: "select",
-        options: ["primary", "success", "warning", "danger", "info"],
+        options: ["primary", "success", "warning", "danger", "info", "text"],
+      },
+      { key: "link", label: "超链接地址", type: "input" },
+      {
+        key: "target",
+        label: "打开方式",
+        type: "select",
+        options: ["_self", "_blank"],
+      },
+      // 文字链接样式（仅 type=text 时生效）
+      { key: "linkColor", label: "文字颜色", type: "input" },
+      { key: "linkFontSize", label: "字体大小(px)", type: "number" },
+      {
+        key: "linkFontWeight",
+        label: "字重",
+        type: "select",
+        options: ["normal", "bold", "lighter"],
+      },
+      {
+        key: "linkTextDecoration",
+        label: "下划线",
+        type: "select",
+        options: ["none", "underline"],
       },
     ],
     styleConfig: commonStyleConfig,
@@ -184,9 +216,11 @@ export const componentList: ComponentConfig[] = [
       placeholder: "请输入",
       label: "输入框",
       labelPosition: "left",
-      labelWidth: "", // 新增，空字符串表示自适应
+      labelWidth: "",
+      labelPrefixIcon: "", // 新增：标签前图标
+      labelSuffixIcon: "", // 新增：标签后图标
     },
-    defaultStyle: { ...defaultCommonStyle },
+    defaultStyle: { ...defaultInputCommonStyle },
     propsConfig: [
       { key: "label", label: "标签", type: "input" },
       {
@@ -195,8 +229,10 @@ export const componentList: ComponentConfig[] = [
         type: "select",
         options: ["left", "top"],
       },
-      { key: "labelWidth", label: "标签宽度(px)", type: "input" }, // 新增
+      { key: "labelWidth", label: "标签宽度(px)", type: "input" },
       { key: "placeholder", label: "占位提示", type: "input" },
+      { key: "labelPrefixIcon", label: "标签前图标", type: "input" }, // 新增
+      { key: "labelSuffixIcon", label: "标签后图标", type: "input" }, // 新增
     ],
     styleConfig: commonStyleConfig,
   },
