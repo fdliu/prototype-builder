@@ -1,6 +1,6 @@
 <template>
   <div class="base-input" :class="{ 'label-top': isLabelTop }">
-    <label v-if="props.props.label" class="input-label" :style="labelStyle">
+    <el-label v-if="props.props.label" class="input-label" :style="labelStyle">
       <el-icon v-if="prefixIconComponent" class="label-icon">
         <component :is="prefixIconComponent" />
       </el-icon>
@@ -8,7 +8,7 @@
       <el-icon v-if="suffixIconComponent" class="label-icon">
         <component :is="suffixIconComponent" />
       </el-icon>
-    </label>
+    </el-label>
     <el-input :placeholder="props.props.placeholder" class="input-field" />
   </div>
 </template>
