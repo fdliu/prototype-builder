@@ -213,7 +213,7 @@ function componentToHTML(comp: ComponentInstance): string {
       const suffixHTML = suffixIcon
         ? `<span style="display:inline-flex; align-items:center; margin-left:4px; width:14px; height:14px;">${suffixIcon}</span>`
         : "";
-      const _w = p.labelWidth + 'px;';
+      const _w = p.labelWidth + "px;";
       const labelHTML = `<label style="width:${_w} display:inline-flex; align-items:center; gap:4px; ${
         labelPosition === "top"
           ? "margin-bottom:4px;"
@@ -401,7 +401,7 @@ function componentToHTML(comp: ComponentInstance): string {
         }));
       }
 
-      let formHTML = `<form class="form" style="${styleStr}">`;
+      let formHTML = `<div style="${styleStr} overflow:auto;"><form class="form" style="${styleStr}">`;
       fieldsArray.forEach((field) => {
         if (labelPosition === "top") {
           formHTML += `<div class="form-item" style="display:flex; flex-direction:column; margin-bottom:8px;">`;
@@ -433,7 +433,7 @@ function componentToHTML(comp: ComponentInstance): string {
         }
         formHTML += `</div>`;
       });
-      formHTML += `</form>`;
+      formHTML += `</form></div>`;
       return formHTML;
     }
 

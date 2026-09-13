@@ -271,6 +271,7 @@ function generateId(): string {
   overflow-y: auto;
   position: relative;
   user-select: none;
+  /* display: flex; */
   display: inline-table;
   /* flex-wrap: wrap;
   align-items: flex-start;

@@ -117,19 +117,18 @@
           <el-col v-for="(span, index) in colSpans" :key="index" :span="span">
             <div
               class="grid-col-area"
+              :title="`列 ${index + 1}（span: ${span}）`"
               :style="getGridColStyle()"
               @dragover.prevent.stop
               @drop.prevent.stop="handleDropToCol(index, $event)"
             >
-              <div class="col-label">
-                列 {{ index + 1 }}（span: {{ span }}）
-              </div>
               <template
                 v-for="child in getColComponents(index)"
                 :key="child.id"
               >
                 <CanvasItem :component="child" :depth="depth + 1" />
               </template>
+
               <div v-if="!getColComponents(index).length" class="drop-hint">
                 拖入组件
               </div>
@@ -168,7 +167,13 @@
 
       <!-- 缩放手柄（仅容器组件显示） -->
       <div
-        v-if="isLayout || isGrid || liveComponent.type === 'table'"
+        v-if="
+          isLayout ||
+          isGrid ||
+          liveComponent.type === 'table' ||
+          liveComponent.type === 'card' ||
+          liveComponent.type === 'form'
+        "
         class="resize-handle"
         @mousedown.stop="startResize"
       ></div>
@@ -369,18 +374,25 @@ function openIconPicker() {
 }
 
 function startResize(e: MouseEvent) {
-  if (!isLayout.value && !isGrid.value && liveComponent.value.type !== "table")
+  const type = liveComponent.value.type;
+  if (
+    !isLayout.value &&
+    !isGrid.value &&
+    type !== "table" &&
+    type !== "card" &&
+    type !== "form"
+  )
     return;
   e.stopPropagation();
   e.preventDefault();
   isResizing.value = true;
   startX = e.clientX;
-  startY = e.clientY; // 新增
+  startY = e.clientY;
   const el = (e.target as HTMLElement).closest(".canvas-item");
   if (el) {
     const rect = el.getBoundingClientRect();
     startWidth = rect.width;
-    startHeight = rect.height; // 新增
+    startHeight = rect.height;
   } else {
     startWidth = 100;
     startHeight = 50;
@@ -636,7 +648,7 @@ onBeforeUnmount(() => {
   padding: 8px;
   border: 2px dashed #dcdfe6;
   border-radius: 4px;
-  min-height: 80px;
+  min-height: 40px;
   background: #fafafa;
   transition: border-color 0.2s;
 }
@@ -644,7 +656,8 @@ onBeforeUnmount(() => {
   border-color: #409eff;
 }
 .col-label {
-  font-size: 11px;
+  padding: 0;
+  font-size: 8px;
   color: #999;
   margin-bottom: 6px;
   font-weight: bold;

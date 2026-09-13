@@ -1,7 +1,7 @@
 <template>
-  <el-card>
+  <el-card style="width: 100%; height: 100%">
     <template #header>{{ props.title }}</template>
-    <div>{{ props.content }}</div>
+    <div style="height: 100%">{{ props.content }}</div>
   </el-card>
 </template>
 

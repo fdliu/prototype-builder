@@ -301,20 +301,17 @@ export const componentList: ComponentConfig[] = [
     defaultProps: {
       fields: ["姓名", "邮箱"],
       fieldsConfig: "",
-      labelPosition: "left", // 新增：标签位置
+      labelPosition: "left",
     },
-    defaultStyle: { ...defaultCommonStyle },
-    propsConfig: [], // 保持为空，由高级界面接管
+    defaultStyle: { ...defaultCommonStyle, width: "400px", height: "200px" },
+    propsConfig: [],
     styleConfig: commonStyleConfig,
   },
   {
     type: "card",
     name: "卡片",
-    defaultProps: {
-      title: "卡片标题",
-      content: "卡片内容",
-    },
-    defaultStyle: { ...defaultCommonStyle },
+    defaultProps: { title: "卡片标题", content: "卡片内容" },
+    defaultStyle: { ...defaultCommonStyle, width: "300px", height: "150px" },
     propsConfig: [
       { key: "title", label: "标题", type: "input" },
       { key: "content", label: "内容", type: "textarea" },
