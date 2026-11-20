@@ -2,6 +2,9 @@ import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 
 export default defineConfig({
+  // GitHub Pages 项目页部署在 /prototype-builder/ 子路径下，
+  // 使用相对 base 可同时兼容根路径与子路径，避免资源 404 导致白屏
+  base: "./",
   plugins: [vue()],
   css: {
     preprocessorOptions: {

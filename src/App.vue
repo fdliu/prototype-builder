@@ -1,8 +1,11 @@
 <template>
   <div class="app-container">
     <header class="header">
-      <h1>后台原型生成器</h1>
+      <h1>原型工场</h1>
       <div class="header-actions">
+        <button class="intro-btn" @click="introVisible = true">✨ 产品介绍</button>
+        <button class="member-btn" @click="memberDialogVisible = true">👑 付费会员</button>
+        <el-button type="danger" @click="clearCanvas">清空内容区</el-button>
         <template v-if="store.multiSelectedIds.length > 1">
           <el-button type="warning" @click="batchCopy">批量复制</el-button>
           <el-button type="danger" @click="batchDelete">批量删除</el-button>
@@ -59,6 +62,8 @@
       @select="handleIconSelect"
     />
     <PreviewDialog v-model="previewVisible" :html-content="previewHTML" />
+    <ProductIntro v-model="introVisible" />
+    <MemberDialog v-model="memberDialogVisible" />
   </div>
 </template>
 
@@ -71,10 +76,14 @@ import PropertyPanel from './components/PropertyPanel.vue';
 import ExportDialog from './components/ExportDialog.vue';
 import IconPicker from './components/IconPicker.vue';
 import PreviewDialog from './components/PreviewDialog.vue';
+import ProductIntro from './components/ProductIntro.vue';
+import MemberDialog from './components/MemberDialog.vue';
 import { generateHTML } from './utils/export';
 
 const store = useEditorStore();
 const exportDialogVisible = ref(false);
+const introVisible = ref(false);
+const memberDialogVisible = ref(false);
 
 const showLeftPanel = ref(true);
 const showRightPanel = ref(true);
@@ -103,6 +112,7 @@ const canRedo = computed(() => store.future.length > 0);
 
 function undo() { store.undo(); }
 function redo() { store.redo(); }
+function clearCanvas() { store.clearCanvas(); }
 function batchCopy() { store.batchCopy(); }
 function batchDelete() { store.batchDelete(); }
 function handleIconSelect(iconName: string) {
@@ -132,6 +142,36 @@ onMounted(() => {
   padding: 10px 20px;
   background: #fff;
   border-bottom: 1px solid #e0e0e0;
+}
+
+.intro-btn {
+  border: none;
+  background: #ecf5ff;
+  color: #2563eb;
+  font-size: 14px;
+  padding: 6px 14px;
+  margin-right: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.intro-btn:hover {
+  background: #d9ecff;
+}
+
+.member-btn {
+  border: none;
+  background: linear-gradient(135deg, #ffb03a, #ff7a00);
+  color: #fff;
+  font-size: 14px;
+  padding: 6px 14px;
+  margin-right: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: filter 0.2s;
+}
+.member-btn:hover {
+  filter: brightness(1.06);
 }
 
 .main {
@@ -175,6 +215,8 @@ onMounted(() => {
   overflow: hidden;
   transition: width 0.3s ease;
   background: #f5f5f5;
+  display: flex;
+  flex-direction: column;
 }
 /* 右侧面板 */
 .right-panel {
@@ -189,6 +231,11 @@ onMounted(() => {
 .panel-inner {
   width: 100%;
   height: 100%;
+}
+.left-panel .panel-inner {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 .right-panel .panel-inner {
   width: 100%;

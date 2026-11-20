@@ -54,6 +54,17 @@ const defaultInputCommonStyle: Record<string, string> = {
   marginLeft: "0",
 };
 
+// 文字链接颜色选项（对应 Element Plus Link 六种类型）
+export const linkColorOptions = ["默认", "主要", "成功", "警告", "危险", "信息"];
+export const linkColorMap: Record<string, string> = {
+  默认: "#606266",
+  主要: "#409eff",
+  成功: "#67c23a",
+  警告: "#e6a23c",
+  危险: "#f56c6c",
+  信息: "#909399",
+};
+
 export const componentList: ComponentConfig[] = [
   {
     type: "layout",
@@ -146,6 +157,43 @@ export const componentList: ComponentConfig[] = [
       { key: "content", label: "文本内容", type: "textarea" },
       { key: "fontSize", label: "字体大小(px)", type: "number" },
       { key: "color", label: "文字颜色", type: "input" },
+      {
+        key: "textAlign",
+        label: "对齐方式",
+        type: "select",
+        options: ["left", "center", "right"],
+      },
+      {
+        key: "fontWeight",
+        label: "字重",
+        type: "select",
+        options: ["normal", "bold"],
+      },
+    ],
+    styleConfig: commonStyleConfig,
+  },
+  {
+    type: "link",
+    name: "文字链接",
+    defaultProps: {
+      content: "文字链接",
+      href: "https://",
+      color: "主要",
+      fontSize: 14,
+      textAlign: "left",
+      fontWeight: "normal",
+    },
+    defaultStyle: { ...defaultBtnCommonStyle },
+    propsConfig: [
+      { key: "content", label: "文本内容", type: "textarea" },
+      { key: "href", label: "超链接地址", type: "input" },
+      {
+        key: "color",
+        label: "字体颜色",
+        type: "select",
+        options: linkColorOptions,
+      },
+      { key: "fontSize", label: "字体大小(px)", type: "number" },
       {
         key: "textAlign",
         label: "对齐方式",
@@ -262,6 +310,52 @@ export const componentList: ComponentConfig[] = [
     styleConfig: commonStyleConfig,
   },
   {
+    type: "radio",
+    name: "单选框",
+    defaultProps: {
+      label: "单选框",
+      options: "选项1,选项2,选项3",
+      value: "选项1",
+      direction: "horizontal",
+    },
+    defaultStyle: { ...defaultCommonStyle },
+    propsConfig: [
+      { key: "label", label: "标签", type: "input" },
+      { key: "options", label: "选项（逗号分隔）", type: "textarea" },
+      { key: "value", label: "默认选中", type: "input" },
+      {
+        key: "direction",
+        label: "排列方向",
+        type: "select",
+        options: ["horizontal", "vertical"],
+      },
+    ],
+    styleConfig: commonStyleConfig,
+  },
+  {
+    type: "checkbox",
+    name: "多选框",
+    defaultProps: {
+      label: "多选框",
+      options: "选项1,选项2,选项3",
+      value: "选项1,选项2",
+      direction: "horizontal",
+    },
+    defaultStyle: { ...defaultCommonStyle },
+    propsConfig: [
+      { key: "label", label: "标签", type: "input" },
+      { key: "options", label: "选项（逗号分隔）", type: "textarea" },
+      { key: "value", label: "默认选中（逗号分隔）", type: "input" },
+      {
+        key: "direction",
+        label: "排列方向",
+        type: "select",
+        options: ["horizontal", "vertical"],
+      },
+    ],
+    styleConfig: commonStyleConfig,
+  },
+  {
     type: "table",
     name: "表格",
     defaultProps: {
@@ -310,6 +404,7 @@ export const componentList: ComponentConfig[] = [
   {
     type: "card",
     name: "卡片",
+    premium: true,
     defaultProps: { title: "卡片标题", content: "卡片内容" },
     defaultStyle: { ...defaultCommonStyle, width: "300px", height: "150px" },
     propsConfig: [
@@ -321,6 +416,7 @@ export const componentList: ComponentConfig[] = [
   {
     type: "dialog",
     name: "弹窗",
+    premium: true,
     defaultProps: {
       title: "弹窗标题",
       triggerText: "打开弹窗",
@@ -335,6 +431,7 @@ export const componentList: ComponentConfig[] = [
   {
     type: "icon",
     name: "图标",
+    premium: true,
     defaultProps: {
       iconName: "HomeFilled",
       color: "#333333",

@@ -1,7 +1,10 @@
 <template>
   <div
     class="canvas-item-wrapper"
-    :class="{ 'wrapper-container': isLayout || isGrid }"
+    :class="{
+      'wrapper-container': isLayout || isGrid,
+      'wrapper-full': isFullWidth && !isLayout && !isGrid,
+    }"
   >
     <div
       class="canvas-item"
@@ -479,6 +482,10 @@ onBeforeUnmount(() => {
   display: block;
   width: 100%;
 }
+.canvas-item-wrapper.wrapper-full {
+  display: block;
+  width: 100%;
+}
 
 .canvas-item {
   position: relative;
@@ -495,6 +502,9 @@ onBeforeUnmount(() => {
 }
 .canvas-item.is-container {
   width: 100%;
+}
+.canvas-item.full-width {
+  box-sizing: border-box;
 }
 
 /* 工具栏绝对定位，不占用布局空间 */

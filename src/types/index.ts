@@ -12,6 +12,7 @@ export interface ComponentInstance {
 export interface ComponentConfig {
   type: string;
   name: string;
+  premium?: boolean;
   defaultProps: Record<string, any>;
   defaultStyle?: Record<string, string>;
   propsConfig?: PropFieldConfig[];

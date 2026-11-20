@@ -363,6 +363,20 @@ export const useEditorStore = defineStore("editor", {
         } catch (e) {}
       }
     },
+    loadTemplate(components: ComponentInstance[]) {
+      this.commit();
+      this.components = JSON.parse(JSON.stringify(components));
+      this.selectedId = null;
+      this.multiSelectedIds = [];
+      this.saveToLocal();
+    },
+    clearCanvas() {
+      this.commit();
+      this.components = [];
+      this.selectedId = null;
+      this.multiSelectedIds = [];
+      this.saveToLocal();
+    },
     openIconPicker(id: string, field: string = "iconName") {
       this.iconPickerTargetId = id;
       this.iconPickerTargetField = field;

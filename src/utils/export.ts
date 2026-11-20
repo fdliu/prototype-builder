@@ -1,4 +1,5 @@
 import type { ComponentInstance } from "../types";
+import { linkColorMap } from "../config/componentConfig";
 import * as Icons from "@element-plus/icons-vue";
 import { h, render } from "vue";
 // ========== 工具函数 ==========
@@ -269,6 +270,71 @@ function componentToHTML(comp: ComponentInstance): string {
       </div>`;
     }
 
+    case "radio": {
+      const rawOpts = p.options;
+      const opts: string[] =
+        Array.isArray(rawOpts)
+          ? rawOpts.map((o: any) => String(o))
+          : String(rawOpts || "")
+              .split(",")
+              .map((s: string) => s.trim())
+              .filter((s) => s);
+      const selected = String(p.value || "");
+      const direction = p.direction || "horizontal";
+      const flexDir = direction === "vertical" ? "column" : "row";
+      const groupName = "radio-" + comp.id.replace(/[^a-zA-Z0-9]/g, "");
+      const itemGap = direction === "vertical" ? "6px" : "16px";
+      const itemsHTML = opts
+        .map((opt) => {
+          const checked = opt === selected ? " checked" : "";
+          return `<label style="display:inline-flex; align-items:center; gap:4px; margin-right:${
+            direction === "vertical" ? "0" : itemGap
+          }; margin-bottom:${
+            direction === "vertical" ? itemGap : "0"
+          }; cursor:pointer; font-size:14px; color:#606266;"><input type="radio" name="${groupName}" value="${opt}"${checked} style="cursor:pointer;" />${opt}</label>`;
+        })
+        .join("");
+      const labelHTML = p.label
+        ? `<span style="font-size:14px; color:#606266; margin-right:8px;">${p.label}</span>`
+        : "";
+      return `<div style="${styleStr} display:flex; align-items:center; flex-wrap:wrap; margin-bottom:10px;">${labelHTML}<div style="display:flex; flex-direction:${flexDir}; flex-wrap:wrap;">${itemsHTML}</div></div>`;
+    }
+
+    case "checkbox": {
+      const rawOpts = p.options;
+      const opts: string[] =
+        Array.isArray(rawOpts)
+          ? rawOpts.map((o: any) => String(o))
+          : String(rawOpts || "")
+              .split(",")
+              .map((s: string) => s.trim())
+              .filter((s) => s);
+      const rawVal = p.value;
+      const values: string[] = Array.isArray(rawVal)
+        ? rawVal.map((v: any) => String(v))
+        : String(rawVal || "")
+            .split(",")
+            .map((s: string) => s.trim())
+            .filter((s) => s);
+      const direction = p.direction || "horizontal";
+      const flexDir = direction === "vertical" ? "column" : "row";
+      const itemGap = direction === "vertical" ? "6px" : "16px";
+      const itemsHTML = opts
+        .map((opt) => {
+          const checked = values.includes(opt) ? " checked" : "";
+          return `<label style="display:inline-flex; align-items:center; gap:4px; margin-right:${
+            direction === "vertical" ? "0" : itemGap
+          }; margin-bottom:${
+            direction === "vertical" ? itemGap : "0"
+          }; cursor:pointer; font-size:14px; color:#606266;"><input type="checkbox" value="${opt}"${checked} style="cursor:pointer;" />${opt}</label>`;
+        })
+        .join("");
+      const labelHTML = p.label
+        ? `<span style="font-size:14px; color:#606266; margin-right:8px;">${p.label}</span>`
+        : "";
+      return `<div style="${styleStr} display:flex; align-items:center; flex-wrap:wrap; margin-bottom:10px;">${labelHTML}<div style="display:flex; flex-direction:${flexDir}; flex-wrap:wrap;">${itemsHTML}</div></div>`;
+    }
+
     case "table": {
       const p = comp.props;
       const styleStr = getStyleString(comp);
@@ -460,6 +526,16 @@ function componentToHTML(comp: ComponentInstance): string {
       return `<div style="${styleStr} font-size:${fontSize}px; color:${color}; text-align:${textAlign}; font-weight:${fontWeight}; word-break:break-word; line-height:1.5;">${p.content}</div>`;
     }
 
+    case "link": {
+      const fontSize = p.fontSize || 14;
+      const color = linkColorMap[p.color] || "#409eff";
+      const textAlign = p.textAlign || "left";
+      const fontWeight = p.fontWeight || "normal";
+      const href = p.href || "#";
+      const target = p.target || "_blank";
+      return `<div style="${styleStr} text-align:${textAlign};"><a href="${href}" target="${target}" style="color:${color}; font-size:${fontSize}px; font-weight:${fontWeight}; text-decoration:underline; word-break:break-word; line-height:1.5;">${p.content}</a></div>`;
+    }
+
     default:
       return `<div style="${styleStr}"></div>`;
   }
@@ -478,7 +554,20 @@ export function exportJSON(components: ComponentInstance[]) {
   downloadFile("prototype.json", data, "application/json");
 }
 
-export function generateHTML(components: ComponentInstance[]): string {
+export function generateHTML(
+  components: ComponentInstance[],
+  options?: { watermark?: string }
+): string {
+  const watermarkText = options?.watermark || "";
+  let watermarkCss = "";
+  let watermarkDiv = "";
+  if (watermarkText) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220"><text x="50%" y="50%" transform="rotate(-30 110 110)" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="#000000" fill-opacity="0.1">${watermarkText}</text></svg>`;
+    const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    watermarkCss = `.watermark { position: fixed; inset: 0; pointer-events: none; z-index: 99999; background-image: url("${url}"); background-repeat: repeat; }`;
+    watermarkDiv = `<div class="watermark"></div>`;
+  }
+
   const bodyContent = components.map(componentToHTML).join("\n");
   return `<!DOCTYPE html>
 <html>
@@ -488,6 +577,7 @@ export function generateHTML(components: ComponentInstance[]): string {
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <script src="https://unpkg.com/@element-plus/icons-vue/dist/index.iife.js"></script>
   <style>
+    ${watermarkCss}
     body { font-family: sans-serif; padding: 20px; }
     .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
     .btn-primary { background: #409eff; color: white; }
@@ -529,6 +619,7 @@ export function generateHTML(components: ComponentInstance[]): string {
   </style>
 </head>
 <body>
+${watermarkDiv}
 ${bodyContent}
 <script>
       // 弹窗逻辑
@@ -581,7 +672,7 @@ ${bodyContent}
 }
 
 export function exportHTML(components: ComponentInstance[]) {
-  const html = generateHTML(components);
+  const html = generateHTML(components, { watermark: "原型工厂" });
   downloadFile("prototype.html", html, "text/html");
 }
 
