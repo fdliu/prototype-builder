@@ -5,6 +5,7 @@
       <div class="header-actions">
         <button class="intro-btn" @click="introVisible = true">✨ 产品介绍</button>
         <button class="member-btn" @click="memberDialogVisible = true">👑 付费会员</button>
+        <button class="snapshot-btn" @click="openSnapshot">📸 快照</button>
         <el-button type="danger" @click="clearCanvas">清空内容区</el-button>
         <template v-if="store.multiSelectedIds.length > 1">
           <el-button type="warning" @click="batchCopy">批量复制</el-button>
@@ -31,7 +32,7 @@
       <!-- 左侧组件面板 -->
       <div class="left-panel" :style="{ width: showLeftPanel ? '200px' : '0px' }">
         <div class="panel-inner">
-          <ComponentList />
+          <ComponentList @open-member="memberDialogVisible = true" />
         </div>
       </div>
 
@@ -56,7 +57,10 @@
       </div>
     </div>
 
-    <ExportDialog v-model="exportDialogVisible" />
+    <ExportDialog
+      v-model="exportDialogVisible"
+      @open-member="memberDialogVisible = true"
+    />
     <IconPicker
       v-model="store.iconPickerVisible"
       @select="handleIconSelect"
@@ -64,6 +68,7 @@
     <PreviewDialog v-model="previewVisible" :html-content="previewHTML" />
     <ProductIntro v-model="introVisible" />
     <MemberDialog v-model="memberDialogVisible" />
+    <SnapshotDialog v-model="snapshotVisible" />
   </div>
 </template>
 
@@ -78,12 +83,16 @@ import IconPicker from './components/IconPicker.vue';
 import PreviewDialog from './components/PreviewDialog.vue';
 import ProductIntro from './components/ProductIntro.vue';
 import MemberDialog from './components/MemberDialog.vue';
+import SnapshotDialog from './components/SnapshotDialog.vue';
+import { useMemberStore } from './stores/member';
 import { generateHTML } from './utils/export';
 
 const store = useEditorStore();
+const memberStore = useMemberStore();
 const exportDialogVisible = ref(false);
 const introVisible = ref(false);
 const memberDialogVisible = ref(false);
+const snapshotVisible = ref(false);
 
 const showLeftPanel = ref(true);
 const showRightPanel = ref(true);
@@ -115,6 +124,13 @@ function redo() { store.redo(); }
 function clearCanvas() { store.clearCanvas(); }
 function batchCopy() { store.batchCopy(); }
 function batchDelete() { store.batchDelete(); }
+function openSnapshot() {
+  if (memberStore.isMember) {
+    snapshotVisible.value = true;
+  } else {
+    memberDialogVisible.value = true;
+  }
+}
 function handleIconSelect(iconName: string) {
   store.selectIcon(iconName);
 }
@@ -125,6 +141,8 @@ function openPreview() {
 }
 onMounted(() => {
   store.loadFromLocal();
+  store.loadSnapshots();
+  memberStore.init();
 });
 </script>
 
@@ -172,6 +190,21 @@ onMounted(() => {
 }
 .member-btn:hover {
   filter: brightness(1.06);
+}
+
+.snapshot-btn {
+  border: none;
+  background: #f0f2f5;
+  color: #606266;
+  font-size: 14px;
+  padding: 6px 14px;
+  margin-right: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.snapshot-btn:hover {
+  background: #e4e7ed;
 }
 
 .main {

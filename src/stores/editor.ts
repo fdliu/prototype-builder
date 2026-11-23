@@ -15,6 +15,12 @@ export const useEditorStore = defineStore("editor", {
     iconPickerVisible: false,
     iconPickerTargetId: null as string | null,
     iconPickerTargetField: "iconName" as string,
+    snapshots: [] as {
+      id: string;
+      name: string;
+      time: number;
+      components: ComponentInstance[];
+    }[],
   }),
   getters: {
     selectedComponent: (state) => {
@@ -376,6 +382,42 @@ export const useEditorStore = defineStore("editor", {
       this.selectedId = null;
       this.multiSelectedIds = [];
       this.saveToLocal();
+    },
+    saveSnapshot(name: string) {
+      this.snapshots.unshift({
+        id: generateId(),
+        name: name || `快照 ${this.snapshots.length + 1}`,
+        time: Date.now(),
+        components: JSON.parse(JSON.stringify(this.components)),
+      });
+      this.persistSnapshots();
+    },
+    restoreSnapshot(id: string) {
+      const snap = this.snapshots.find((s) => s.id === id);
+      if (!snap) return;
+      this.commit();
+      this.components = JSON.parse(JSON.stringify(snap.components));
+      this.selectedId = null;
+      this.multiSelectedIds = [];
+      this.saveToLocal();
+    },
+    deleteSnapshot(id: string) {
+      this.snapshots = this.snapshots.filter((s) => s.id !== id);
+      this.persistSnapshots();
+    },
+    persistSnapshots() {
+      localStorage.setItem(
+        "prototype-builder-snapshots",
+        JSON.stringify(this.snapshots)
+      );
+    },
+    loadSnapshots() {
+      const data = localStorage.getItem("prototype-builder-snapshots");
+      if (data) {
+        try {
+          this.snapshots = JSON.parse(data);
+        } catch (e) {}
+      }
     },
     openIconPicker(id: string, field: string = "iconName") {
       this.iconPickerTargetId = id;

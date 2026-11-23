@@ -2,6 +2,22 @@ import type { ComponentInstance } from "../types";
 import { linkColorMap } from "../config/componentConfig";
 import * as Icons from "@element-plus/icons-vue";
 import { h, render } from "vue";
+
+function hashCode(input: string): string {
+  let h = 5381;
+  for (let i = 0; i < input.length; i++) {
+    h = ((h << 5) + h + input.charCodeAt(i)) >>> 0;
+  }
+  return h.toString(36);
+}
+
+// 把组件自定义 id 转成安全的 DOM id（用于弹窗/表格联动）
+function safeId(input: any): string {
+  return String(input ?? "")
+    .replace(/[^a-zA-Z0-9_-]/g, "")
+    .slice(0, 64);
+}
+
 // ========== 工具函数 ==========
 function iconToSVGString(iconName: string): string {
   if (!iconName) return "";
@@ -152,11 +168,15 @@ function componentToHTML(comp: ComponentInstance): string {
 
     // ---------- 弹窗容器（重点） ----------
     case "dialog": {
-      const dialogId = "dialog-" + comp.id.replace(/[^a-zA-Z0-9]/g, "");
+      const dialogId = "dlg-" + safeId(p.id || comp.id);
       const contentHTML = renderSlot(comp.slots?.content) || "<p>弹窗内容</p>";
+      const triggerHTML =
+        p.trigger === "hidden"
+          ? ""
+          : `<button class="btn btn-primary" onclick="showDialog('${dialogId}')">${p.triggerText}</button>`;
       return `
         <div class="dialog-wrapper">
-          <button class="btn btn-primary" onclick="showDialog('${dialogId}')">${p.triggerText}</button>
+          ${triggerHTML}
           <div class="dialog-mask" id="${dialogId}" style="display:none;" onclick="if(event.target===this) hideDialog('${dialogId}')">
             <div class="dialog-box">
               <div class="dialog-title">
@@ -196,7 +216,21 @@ function componentToHTML(comp: ComponentInstance): string {
         ].join(";");
         return `<div style="${styleStr}"><button style="${textStyle}">${p.text}</button></div>`;
       }
-      return `<div style="${styleStr}"><button class="btn btn-${p.type}">${p.text}</button></div>`;
+      let onClick = "";
+      if (p.action === "open-dialog" && p.dialogId) {
+        onClick = ` onclick="showDialog('dlg-${safeId(p.dialogId)}')"`;
+      } else if (p.action === "close-dialog" && p.dialogId) {
+        onClick = ` onclick="hideDialog('dlg-${safeId(p.dialogId)}')"`;
+      } else if (
+        p.action === "confirm-dialog" &&
+        p.dialogId &&
+        p.targetTableId
+      ) {
+        onClick = ` onclick="confirmAddRow('dlg-${safeId(
+          p.dialogId
+        )}', 'table-${safeId(p.targetTableId)}')"`;
+      }
+      return `<div style="${styleStr}"><button class="btn btn-${p.type}"${onClick}>${p.text}</button></div>`;
     }
 
     case "input": {
@@ -391,9 +425,10 @@ function componentToHTML(comp: ComponentInstance): string {
         rows = dataRaw;
       }
 
+      const tableIdAttr = p.id ? ` id="table-${safeId(p.id)}"` : "";
       let tableHTML = `<div style="${styleStr}" height:${
         p.height || "auto"
-      }; overflow:auto;"><table class="table" style="border-collapse:collapse; width:100%;">`;
+      }; overflow:auto;"><table class="table"${tableIdAttr} style="border-collapse:collapse; width:100%;">`;
       tableHTML += `<thead><tr>`;
       columns.forEach((col) => {
         const linkAttr = col.link ? ` href="${col.link}" target="_blank"` : "";
@@ -556,7 +591,7 @@ export function exportJSON(components: ComponentInstance[]) {
 
 export function generateHTML(
   components: ComponentInstance[],
-  options?: { watermark?: string }
+  options?: { watermark?: string; password?: string }
 ): string {
   const watermarkText = options?.watermark || "";
   let watermarkCss = "";
@@ -566,6 +601,20 @@ export function generateHTML(
     const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
     watermarkCss = `.watermark { position: fixed; inset: 0; pointer-events: none; z-index: 99999; background-image: url("${url}"); background-repeat: repeat; }`;
     watermarkDiv = `<div class="watermark"></div>`;
+  }
+
+  const password = options?.password || "";
+  let passwordCss = "";
+  let passwordDiv = "";
+  let passwordScript = "";
+  if (password) {
+    const pwdHash = hashCode(password);
+    passwordCss = `.pb-lock { position: fixed; inset: 0; background: #fff; z-index: 100000; display: flex; align-items: center; justify-content: center; font-family: sans-serif; } .pb-lock-box { text-align: center; } .pb-lock-box h2 { margin: 0 0 8px; } .pb-lock-box .tip { color: #666; margin: 0 0 16px; } .pb-lock-box input { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; margin-right: 8px; } .pb-lock-box button { padding: 8px 16px; border: none; border-radius: 4px; background: #409eff; color: #fff; cursor: pointer; } #pb-err { color: #f56c6c; margin-top: 8px; display: none; }`;
+    passwordDiv = `<div class="pb-lock" id="pb-lock"><div class="pb-lock-box"><h2>请输入访问密码</h2><p class="tip">此原型已加密分享</p><input id="pb-pwd" type="password" placeholder="访问密码"><button onclick="pbUnlock()">查看原型</button><p id="pb-err">密码错误</p></div></div>`;
+    passwordScript = `<script>
+      function pbHash(s){var h=5381;for(var i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))>>>0;}return h.toString(36);}
+      function pbUnlock(){var v=document.getElementById('pb-pwd').value;if(pbHash(v)==='${pwdHash}'){document.getElementById('pb-lock').style.display='none';}else{document.getElementById('pb-err').style.display='block';}}
+    </` + `script>`;
   }
 
   const bodyContent = components.map(componentToHTML).join("\n");
@@ -578,6 +627,7 @@ export function generateHTML(
   <script src="https://unpkg.com/@element-plus/icons-vue/dist/index.iife.js"></script>
   <style>
     ${watermarkCss}
+    ${passwordCss}
     body { font-family: sans-serif; padding: 20px; }
     .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
     .btn-primary { background: #409eff; color: white; }
@@ -619,6 +669,7 @@ export function generateHTML(
   </style>
 </head>
 <body>
+${passwordDiv}
 ${watermarkDiv}
 ${bodyContent}
 <script>
@@ -630,6 +681,37 @@ ${bodyContent}
       function hideDialog(id) {
         var mask = document.getElementById(id);
         if (mask) mask.style.display = 'none';
+      }
+
+      // 弹窗确认：把弹窗里的表单值追加为目标表格的一行
+      function confirmAddRow(dialogId, tableId) {
+        var box = document.getElementById(dialogId);
+        var table = document.getElementById(tableId);
+        if (!box || !table) return;
+        var fields = box.querySelectorAll('input, select');
+        var row = [];
+        fields.forEach(function (el) {
+          var v = (el.value || '').trim();
+          row.push(v);
+        });
+        var hasValue = row.some(function (v) { return v !== ''; });
+        if (!hasValue) return;
+        var tbody = table.querySelector('tbody');
+        if (!tbody) return;
+        var tr = document.createElement('tr');
+        row.forEach(function (cell) {
+          var td = document.createElement('td');
+          td.style.fontSize = '14px';
+          td.style.padding = '8px';
+          td.textContent = cell;
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+        fields.forEach(function (el) {
+          if (el.tagName === 'SELECT') el.selectedIndex = 0;
+          else el.value = '';
+        });
+        hideDialog(dialogId);
       }
 
       // 图标替换
@@ -667,13 +749,25 @@ ${bodyContent}
       // 页面加载完成后渲染
       window.addEventListener('load', renderIcons);
 </script>
+${passwordScript}
 </body>
 </html>`;
 }
 
-export function exportHTML(components: ComponentInstance[]) {
-  const html = generateHTML(components, { watermark: "原型工厂" });
+export function exportHTML(
+  components: ComponentInstance[],
+  options?: { watermark?: string }
+) {
+  const html = generateHTML(components, options);
   downloadFile("prototype.html", html, "text/html");
+}
+
+export function exportPasswordHTML(
+  components: ComponentInstance[],
+  password: string
+) {
+  const html = generateHTML(components, { password });
+  downloadFile("prototype-protected.html", html, "text/html");
 }
 
 function downloadFile(filename: string, content: string, mimeType: string) {

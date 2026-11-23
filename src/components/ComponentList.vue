@@ -9,20 +9,21 @@
       <el-tooltip
         v-for="comp in componentList"
         :key="comp.type"
-        :content="comp.premium ? '需要开通会员' : '拖动到中间内容区'"
+        :content="isLocked(comp) ? '会员功能：点击开通' : '拖动到中间内容区'"
         placement="right"
         effect="dark"
       >
         <div
           class="component-item"
-          :class="{ 'is-premium': comp.premium }"
-          :draggable="!comp.premium"
+          :class="{ 'is-premium': isLocked(comp) }"
+          :draggable="!isLocked(comp)"
           @dragstart="onDragStart($event, comp)"
+          @click="onItemClick(comp)"
         >
           <span class="item-icon">{{ componentIcons[comp.type] || '▪' }}</span>
           <span class="item-label">{{ comp.name }}</span>
-          <span v-if="comp.premium" class="lock-icon">🔒</span>
-          <span v-if="comp.premium" class="premium-tag">会员</span>
+          <span v-if="isLocked(comp)" class="lock-icon">🔒</span>
+          <span v-if="isLocked(comp)" class="premium-tag">会员</span>
           <span class="item-arrow">›</span>
         </div>
       </el-tooltip>
@@ -54,9 +55,12 @@ import { componentList } from '../config/componentConfig';
 import { industryTemplates } from '../config/templates';
 import type { TemplateDef } from '../config/templates';
 import { useEditorStore } from '../stores/editor';
+import { useMemberStore } from '../stores/member';
 import type { ComponentConfig } from '../types';
 
 const store = useEditorStore();
+const memberStore = useMemberStore();
+const emit = defineEmits<{ (e: 'open-member'): void }>();
 const showComponents = ref(true);
 const showTemplates = ref(true);
 
@@ -83,8 +87,16 @@ const templateIcons: Record<string, string> = {
   'device-ledger': '⚙️',
 };
 
+function isLocked(comp: ComponentConfig) {
+  return !!comp.premium && !memberStore.isMember;
+}
+
+function onItemClick(comp: ComponentConfig) {
+  if (isLocked(comp)) emit('open-member');
+}
+
 function onDragStart(e: DragEvent, comp: ComponentConfig) {
-  if (comp.premium) {
+  if (isLocked(comp)) {
     e.preventDefault();
     return;
   }

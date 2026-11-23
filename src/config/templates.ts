@@ -159,6 +159,24 @@ function layout(
   };
 }
 
+function dialog(
+  title: string,
+  content: ComponentInstance[],
+  extra: Record<string, any> = {}
+): ComponentInstance {
+  return {
+    id: uid(),
+    type: "dialog",
+    props: {
+      title,
+      triggerText: "打开弹窗",
+      ...extra,
+    },
+    style: { ...baseStyle },
+    slots: { content },
+  };
+}
+
 // ========== 模板 1：政务审批表单 ==========
 export function buildGovApproval(): ComponentInstance[] {
   return [
@@ -248,10 +266,16 @@ export function buildDeviceLedger(): ComponentInstance[] {
         ],
         content: [
           text("设备台账", { fontSize: 18, fontWeight: "bold" }),
-          grid(3, [
+          grid(4, [
             [input("设备编号", "请输入设备编号")],
             [select("状态", ["运行中", "维修中", "停机"])],
             [button("查询", "primary")],
+            [
+              button("新增设备", "success", {
+                action: "open-dialog",
+                dialogId: "device-add-dialog",
+              }),
+            ],
           ]),
           table(
             ["设备编号", "设备名称", "型号", "状态", "负责人"],
@@ -259,7 +283,37 @@ export function buildDeviceLedger(): ComponentInstance[] {
               ["SB-001", "空压机", "GA-55", "运行中", "张工"],
               ["SB-002", "数控车床", "CK6140", "维修中", "李工"],
               ["SB-003", "注塑机", "MA1600", "停机", "王工"],
-            ]
+            ],
+            { id: "device-table" }
+          ),
+          dialog(
+            "新增设备",
+            [
+              input("设备编号", "请输入设备编号"),
+              input("设备名称", "请输入设备名称"),
+              input("型号", "请输入型号"),
+              select("状态", ["运行中", "维修中", "停机"]),
+              input("负责人", "请输入负责人"),
+              grid(2, [
+                [
+                  button("确认", "primary", {
+                    action: "confirm-dialog",
+                    dialogId: "device-add-dialog",
+                    targetTableId: "device-table",
+                  }),
+                ],
+                [
+                  button("取消", "info", {
+                    action: "close-dialog",
+                    dialogId: "device-add-dialog",
+                  }),
+                ],
+              ]),
+            ],
+            {
+              id: "device-add-dialog",
+              trigger: "hidden",
+            }
           ),
         ],
         footer: [text("设备管理部", { fontSize: 12, color: "#666666" })],

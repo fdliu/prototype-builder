@@ -15,7 +15,21 @@
         <span v-if="plan.hot" class="hot-badge">推荐</span>
         <h3 class="plan-name">{{ plan.name }}</h3>
         <div class="plan-price">
-          {{ plan.price }}<span v-if="plan.unit" class="plan-unit">{{ plan.unit }}</span>
+          <template v-if="plan.durations">
+            {{ currentPrice(plan).price }}<span class="plan-unit">{{ currentPrice(plan).unit }}</span>
+          </template>
+          <template v-else>
+            {{ plan.price }}<span v-if="plan.unit" class="plan-unit">{{ plan.unit }}</span>
+          </template>
+        </div>
+        <div v-if="plan.durations" class="duration-tabs">
+          <span
+            v-for="d in plan.durations"
+            :key="d.key"
+            class="duration-tab"
+            :class="{ active: selectedDuration === d.key }"
+            @click="selectedDuration = d.key"
+          >{{ d.label }}</span>
         </div>
         <ul class="plan-features">
           <li v-for="f in plan.features" :key="f">{{ f }}</li>
@@ -23,17 +37,46 @@
         <button
           class="plan-btn"
           :class="{ primary: plan.hot }"
-          @click="close"
+          @click="onPlanClick(plan)"
         >
           {{ plan.button }}
         </button>
       </div>
     </div>
+
+    <div class="activate-panel">
+      <template v-if="memberStore.isMember">
+        <div class="activated">
+          <span>✅ 已开通专业会员（{{ memberStore.expiryText }}）</span>
+          <el-button size="small" @click="logout">退出登录</el-button>
+        </div>
+      </template>
+      <template v-else>
+        <div class="activate-row">
+          <el-input
+            v-model="licenseInput"
+            placeholder="输入激活码，如 PB-XXXXXXXX-XXXXXX"
+            @keyup.enter="activate"
+          />
+          <el-button type="primary" @click="activate">激活会员</el-button>
+        </div>
+        <p class="activate-hint">购买后获取激活码，输入即可解锁会员功能。</p>
+      </template>
+    </div>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import { ElMessage } from 'element-plus';
+import { useMemberStore } from '../stores/member';
+
+interface DurationOption {
+  key: string;
+  label: string;
+  price: string;
+  unit: string;
+}
 
 interface Plan {
   name: string;
@@ -42,6 +85,7 @@ interface Plan {
   features: string[];
   button: string;
   hot: boolean;
+  durations?: DurationOption[];
 }
 
 const props = defineProps<{ modelValue: boolean }>();
@@ -51,6 +95,10 @@ const dialogVisible = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val),
 });
+
+const memberStore = useMemberStore();
+const licenseInput = ref('');
+const selectedDuration = ref('year');
 
 const plans: Plan[] = [
   {
@@ -64,7 +112,12 @@ const plans: Plan[] = [
   {
     name: '专业会员',
     price: '¥69',
-    unit: '/月',
+    unit: '/月起',
+    durations: [
+      { key: 'month', label: '月卡', price: '¥69', unit: '/月' },
+      { key: 'quarter', label: '季卡', price: '¥169', unit: '/季' },
+      { key: 'year', label: '年卡', price: '¥599', unit: '/年' },
+    ],
     features: [
       '无水印干净源码导出',
       '全部后台组件解锁',
@@ -94,6 +147,49 @@ const plans: Plan[] = [
 
 function close() {
   emit('update:modelValue', false);
+}
+
+function currentPrice(plan: Plan): { price: string; unit: string } {
+  if (plan.durations && plan.durations.length > 0) {
+    return (
+      plan.durations.find((d) => d.key === selectedDuration.value) ||
+      plan.durations[0]
+    );
+  }
+  return { price: plan.price, unit: plan.unit };
+}
+
+function onPlanClick(plan: Plan) {
+  if (plan.hot) {
+    const p = currentPrice(plan);
+    const label =
+      plan.durations?.find((d) => d.key === selectedDuration.value)?.label || '';
+    ElMessage.info(`${label} ${p.price}，付款后获取激活码，在下方输入开通`);
+  } else {
+    close();
+  }
+}
+
+function activate() {
+  const key = licenseInput.value.trim();
+  if (!key) {
+    ElMessage.warning('请输入激活码');
+    return;
+  }
+  const result = memberStore.activate(key);
+  if (result === 'ok') {
+    ElMessage.success('会员激活成功');
+    licenseInput.value = '';
+  } else if (result === 'expired') {
+    ElMessage.error('激活码已过期，请重新购买');
+  } else {
+    ElMessage.error('激活码无效，请检查后重试');
+  }
+}
+
+function logout() {
+  memberStore.logout();
+  ElMessage.success('已退出会员');
 }
 </script>
 
@@ -158,6 +254,27 @@ function close() {
   color: #6b7280;
 }
 
+.duration-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: -4px 0 12px;
+}
+.duration-tab {
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid #dcdfe6;
+  border-radius: 999px;
+  color: #606266;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.duration-tab.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
 .plan-features {
   list-style: none;
   padding: 0;
@@ -198,5 +315,27 @@ function close() {
 }
 .plan-btn.primary:hover {
   background: #1d4ed8;
+}
+
+.activate-panel {
+  margin-top: 20px;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 16px;
+}
+.activate-row {
+  display: flex;
+  gap: 10px;
+}
+.activate-hint {
+  color: #909399;
+  font-size: 12px;
+  margin: 8px 0 0;
+}
+.activated {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #67c23a;
+  font-weight: 600;
 }
 </style>
