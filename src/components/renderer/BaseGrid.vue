@@ -10,6 +10,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { getGridColFlexStyle } from "../../config/componentConfig";
 
 const props = defineProps<{
   props: Record<string, any>;
@@ -43,24 +44,7 @@ const colSpans = computed(() => {
 });
 
 function getGridColStyle(): Record<string, string> {
-  const alignMap: Record<string, string> = {
-    top: "flex-start",
-    middle: "center",
-    bottom: "flex-end",
-  };
-  const justifyMap: Record<string, string> = {
-    left: "flex-start",
-    center: "center",
-    right: "flex-end",
-  };
-  const colAlign = props?.props?.component?.colAlign || "top";
-  const colJustify = props?.props?.component?.colJustify || "left";
-  return {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: justifyMap[colJustify] || "flex-start",
-    justifyContent: alignMap[colAlign] || "flex-start",
-  };
+  return getGridColFlexStyle(props.props || {});
 }
 </script>
 

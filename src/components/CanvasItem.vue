@@ -188,7 +188,7 @@
 import { computed, ref, onBeforeUnmount, provide } from "vue";
 import { useEditorStore } from "../stores/editor";
 import { getRenderer } from "./renderer";
-import { componentList } from "../config/componentConfig";
+import { componentList, getGridColFlexStyle } from "../config/componentConfig";
 import type { ComponentInstance } from "../types";
 
 // 在 setup 中提供编辑态标识
@@ -423,24 +423,7 @@ function onResizeEnd() {
 }
 
 function getGridColStyle(): Record<string, string> {
-  const alignMap: Record<string, string> = {
-    top: "flex-start",
-    middle: "center",
-    bottom: "flex-end",
-  };
-  const justifyMap: Record<string, string> = {
-    left: "flex-start",
-    center: "center",
-    right: "flex-end",
-  };
-  const colAlign = liveComponent.value.props?.colAlign || "top";
-  const colJustify = liveComponent.value.props?.colJustify || "left";
-  return {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: justifyMap[colJustify] || "flex-start",
-    justifyContent: alignMap[colAlign] || "flex-start",
-  };
+  return getGridColFlexStyle(liveComponent.value.props || {});
 }
 
 const headerSlotStyle = computed(() => {

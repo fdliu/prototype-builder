@@ -54,6 +54,50 @@ const defaultInputCommonStyle: Record<string, string> = {
   marginLeft: "0",
 };
 
+// 栅格列内排列方式：一行水平（默认）/ 自动换行 / 垂直堆叠
+export const gridLayoutDirOptions = ["一行水平", "自动换行", "垂直堆叠"];
+
+// 统一计算栅格列内 flex 布局：保证「水平对齐」始终控制水平方向、「垂直对齐」始终控制垂直方向
+export function getGridColFlexStyle(
+  props: Record<string, any> = {}
+): Record<string, string> {
+  const verMap: Record<string, string> = {
+    top: "flex-start",
+    middle: "center",
+    bottom: "flex-end",
+  };
+  const horMap: Record<string, string> = {
+    left: "flex-start",
+    center: "center",
+    right: "flex-end",
+  };
+
+  // 兼容英文旧值
+  const rawDir = props.layoutDir || "一行水平";
+  const dir =
+    rawDir === "row" ? "一行水平" : rawDir === "wrap" ? "自动换行" : rawDir === "column" ? "垂直堆叠" : rawDir;
+  const isRow = dir !== "垂直堆叠";
+
+  const colAlign = props.colAlign || "top";
+  const colJustify = props.colJustify || "left";
+
+  // 行方向：水平轴由 justifyContent 控制；列方向：水平轴由 alignItems 控制
+  const alignItems = isRow
+    ? verMap[colAlign] || "flex-start"
+    : horMap[colJustify] || "flex-start";
+  const justifyContent = isRow
+    ? horMap[colJustify] || "flex-start"
+    : verMap[colAlign] || "flex-start";
+
+  return {
+    display: "flex",
+    flexDirection: isRow ? "row" : "column",
+    flexWrap: dir === "自动换行" ? "wrap" : "nowrap",
+    alignItems,
+    justifyContent,
+  };
+}
+
 // 文字链接颜色选项（对应 Element Plus Link 六种类型）
 export const linkColorOptions = ["默认", "主要", "成功", "警告", "危险", "信息"];
 export const linkColorMap: Record<string, string> = {
@@ -119,6 +163,7 @@ export const componentList: ComponentConfig[] = [
       columns: 2,
       gutter: 10,
       colSpans: [12, 12],
+      layoutDir: "一行水平", // 列内排列方式：一行水平（默认）| 自动换行 | 垂直堆叠
       colAlign: "top", // 垂直对齐：top | middle | bottom
       colJustify: "left", // 水平对齐：left | center | right
     },
@@ -126,6 +171,12 @@ export const componentList: ComponentConfig[] = [
     propsConfig: [
       { key: "columns", label: "列数", type: "number" },
       { key: "gutter", label: "间距", type: "number" },
+      {
+        key: "layoutDir",
+        label: "排列方式",
+        type: "select",
+        options: gridLayoutDirOptions,
+      },
       { key: "colSpans", label: "每列跨度（逗号分隔）", type: "textarea" },
       {
         key: "colAlign",

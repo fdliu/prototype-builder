@@ -1,5 +1,5 @@
 import type { ComponentInstance } from "../types";
-import { linkColorMap } from "../config/componentConfig";
+import { linkColorMap, getGridColFlexStyle } from "../config/componentConfig";
 import * as Icons from "@element-plus/icons-vue";
 import { h, render } from "vue";
 
@@ -132,20 +132,10 @@ function componentToHTML(comp: ComponentInstance): string {
     case "grid": {
       const gutter = Number(p.gutter) || 0;
       const spans = getColSpans(p);
-      const colAlign = p.colAlign || "top";
-      const colJustify = p.colJustify || "left";
-      const alignMap: Record<string, string> = {
-        top: "flex-start",
-        middle: "center",
-        bottom: "flex-end",
-      };
-      const justifyMap: Record<string, string> = {
-        left: "flex-start",
-        center: "center",
-        right: "flex-end",
-      };
-      const alignItems = justifyMap[colJustify] || "flex-start";
-      const justifyContent = alignMap[colAlign] || "flex-start";
+      const colFlex = getGridColFlexStyle(p);
+      const colFlexCss = Object.entries(colFlex)
+        .map(([k, v]) => `${k.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase())}:${v}`)
+        .join("; ");
 
       // 使用负边距抵消列内边距，避免 gap 导致换行
       let gridHTML = `<div class="el-row" style="display:flex; flex-wrap:wrap; margin-left:-${
@@ -157,7 +147,7 @@ function componentToHTML(comp: ComponentInstance): string {
         gridHTML += `<div class="el-col" style="flex:0 0 ${width}%; max-width:${width}%; box-sizing:border-box; padding-left:${
           gutter / 2
         }px; padding-right:${gutter / 2}px;">
-          <div style="display:flex; flex-direction:column; align-items:${alignItems}; justify-content:${justifyContent};">
+          <div style="${colFlexCss};">
             ${colContent || `列 ${index + 1}`}
           </div>
         </div>`;
