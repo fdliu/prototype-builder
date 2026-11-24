@@ -180,6 +180,13 @@ export const useEditorStore = defineStore("editor", {
         comp.style = { ...comp.style, ...style };
       }
     },
+    // 拖拽调列宽等高频更新 props：不写入撤销历史、不落盘，结束时再 commit/落盘
+    updatePropsDirect(id: string, props: Record<string, any>) {
+      const comp = this.findComponentById(id);
+      if (comp) {
+        comp.props = { ...comp.props, ...props };
+      }
+    },
     moveComponentToRoot(id: string) {
       const comp = this.findComponentById(id);
       if (!comp) return;

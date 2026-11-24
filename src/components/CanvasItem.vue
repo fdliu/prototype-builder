@@ -135,6 +135,18 @@
               <div v-if="!getColComponents(index).length" class="drop-hint">
                 拖入组件
               </div>
+
+              <!-- 列宽拖拽条：仅选中栅格、非末列时显示，拖动调整相邻两列跨度 -->
+              <div
+                v-if="
+                  store.selectedId === liveComponent.id &&
+                  index < colSpans.length - 1
+                "
+                class="col-resizer"
+                title="拖动调整列宽"
+                @mousedown.stop.prevent="startColResize($event, index)"
+                @dragstart.prevent.stop
+              ></div>
             </div>
           </el-col>
         </el-row>
@@ -199,6 +211,14 @@ let startX = 0;
 let startWidth = 0;
 let startY = 0;
 let startHeight = 0;
+
+// 列宽拖拽相关
+const MIN_COL_SPAN = 3;
+const isColResizing = ref(false);
+let colResizerIndex = 0;
+let colStartX = 0;
+let colRowWidth = 0;
+let colStartSpans: number[] = [];
 const props = defineProps<{ component: ComponentInstance; depth: number }>();
 const store = useEditorStore();
 const isDragging = ref(false);
@@ -461,6 +481,47 @@ function onResizeEnd() {
   document.removeEventListener("mouseup", onResizeEnd);
 }
 
+// 开始拖拽调整相邻两列的跨度（列宽）
+function startColResize(e: MouseEvent, colIndex: number) {
+  if (!isGrid.value) return;
+  e.stopPropagation();
+  e.preventDefault();
+  colResizerIndex = colIndex;
+  colStartX = e.clientX;
+  colStartSpans = [...colSpans.value];
+  const rowEl = (e.target as HTMLElement).closest(".el-row") as HTMLElement | null;
+  colRowWidth = rowEl ? rowEl.clientWidth : 1;
+  isColResizing.value = true;
+  // 以本次拖宽前的状态作为一次撤销点
+  store.commit();
+  document.addEventListener("mousemove", onColResizeMove);
+  document.addEventListener("mouseup", onColResizeEnd);
+}
+
+function onColResizeMove(e: MouseEvent) {
+  if (!isColResizing.value) return;
+  const dx = e.clientX - colStartX;
+  const i = colResizerIndex;
+  const total = colStartSpans.reduce((a, b) => a + b, 0) || 24;
+  const restSum = total - colStartSpans[i] - colStartSpans[i + 1];
+  const spanPerPx = total / (colRowWidth || 1);
+  let newLeft = colStartSpans[i] + Math.round(dx * spanPerPx);
+  const maxLeft = total - restSum - MIN_COL_SPAN;
+  newLeft = Math.max(MIN_COL_SPAN, Math.min(maxLeft, newLeft));
+  const newRight = total - restSum - newLeft;
+  const next = colStartSpans.map((v, idx) =>
+    idx === i ? newLeft : idx === i + 1 ? newRight : v
+  );
+  store.updatePropsDirect(liveComponent.value.id, { colSpans: next });
+}
+
+function onColResizeEnd() {
+  isColResizing.value = false;
+  store.saveToLocal();
+  document.removeEventListener("mousemove", onColResizeMove);
+  document.removeEventListener("mouseup", onColResizeEnd);
+}
+
 function getGridColStyle(): Record<string, string> {
   return getGridColFlexStyle(liveComponent.value.props || {});
 }
@@ -491,6 +552,8 @@ const headerSlotStyle = computed(() => {
 onBeforeUnmount(() => {
   document.removeEventListener("mousemove", onResizeMove);
   document.removeEventListener("mouseup", onResizeEnd);
+  document.removeEventListener("mousemove", onColResizeMove);
+  document.removeEventListener("mouseup", onColResizeEnd);
 });
 </script>
 
@@ -677,6 +740,7 @@ onBeforeUnmount(() => {
   width: 100%;
 }
 .grid-col-area {
+  position: relative;
   padding: 8px;
   border: 2px dashed #dcdfe6;
   border-radius: 4px;
@@ -686,6 +750,29 @@ onBeforeUnmount(() => {
 }
 .grid-col-area:hover {
   border-color: #409eff;
+}
+.col-resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -4px;
+  width: 8px;
+  cursor: col-resize;
+  z-index: 6;
+}
+.col-resizer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: transparent;
+  transition: background 0.15s;
+}
+.col-resizer:hover::after {
+  background: #409eff;
 }
 .col-label {
   padding: 0;
