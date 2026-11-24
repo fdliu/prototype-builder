@@ -173,6 +173,13 @@ export const useEditorStore = defineStore("editor", {
         this.saveToLocal();
       }
     },
+    // 拖拽缩放过冲中高频更新样式：不写入撤销历史、不落盘，避免撤销栈被打碎
+    updateStyleDirect(id: string, style: Record<string, string>) {
+      const comp = this.findComponentById(id);
+      if (comp) {
+        comp.style = { ...comp.style, ...style };
+      }
+    },
     moveComponentToRoot(id: string) {
       const comp = this.findComponentById(id);
       if (!comp) return;

@@ -168,18 +168,17 @@
         />
       </div>
 
-      <!-- 缩放手柄（仅容器组件显示） -->
-      <div
-        v-if="
-          isLayout ||
-          isGrid ||
-          liveComponent.type === 'table' ||
-          liveComponent.type === 'card' ||
-          liveComponent.type === 'form'
-        "
-        class="resize-handle"
-        @mousedown.stop="startResize"
-      ></div>
+      <!-- 缩放手柄（仅容器组件显示；grid 支持八方向，其余容器保留右下角） -->
+      <template v-if="showResizeHandles">
+        <div
+          v-for="dir in resizeDirections"
+          :key="dir"
+          :class="['resize-handle', 'rh-' + dir]"
+          :title="resizeHandleTitle(dir)"
+          @mousedown.stop.prevent="startResize($event, dir)"
+          @dragstart.prevent.stop
+        ></div>
+      </template>
     </div>
   </div>
 </template>
@@ -195,6 +194,7 @@ import type { ComponentInstance } from "../types";
 provide("isEditing", true);
 // 缩放相关
 const isResizing = ref(false);
+const resizeDirection = ref("se");
 let startX = 0;
 let startWidth = 0;
 let startY = 0;
@@ -209,6 +209,34 @@ const liveComponent = computed(() => {
 const isLayout = computed(() => liveComponent.value.type === "layout");
 const isGrid = computed(() => liveComponent.value.type === "grid");
 const isDialog = computed(() => liveComponent.value.type === "dialog");
+
+// 是否显示缩放手柄（与原有容器判断保持一致）
+const showResizeHandles = computed(() => {
+  const t = liveComponent.value.type;
+  return isLayout.value || isGrid.value || t === "table" || t === "card" || t === "form";
+});
+
+// grid 支持八方向缩放；其他容器保持原有右下角单手柄
+const resizeDirections = computed<string[]>(() => {
+  return isGrid.value
+    ? ["n", "s", "e", "w", "ne", "nw", "se", "sw"]
+    : ["se"];
+});
+
+function resizeHandleTitle(dir: string): string {
+  if (!isGrid.value) return "拖动改变大小";
+  const map: Record<string, string> = {
+    n: "拖动改变高度",
+    s: "拖动改变高度",
+    e: "拖动改变宽度",
+    w: "拖动改变宽度",
+    ne: "拖动改变宽高",
+    nw: "拖动改变宽高",
+    se: "拖动改变宽高",
+    sw: "拖动改变宽高",
+  };
+  return map[dir] || "";
+}
 
 const showSidebar = computed(() => {
   const val = liveComponent.value.props?.showSidebar;
@@ -376,7 +404,7 @@ function openIconPicker() {
   store.openIconPicker(liveComponent.value.id);
 }
 
-function startResize(e: MouseEvent) {
+function startResize(e: MouseEvent, dir: string = "se") {
   const type = liveComponent.value.type;
   if (
     !isLayout.value &&
@@ -388,6 +416,7 @@ function startResize(e: MouseEvent) {
     return;
   e.stopPropagation();
   e.preventDefault();
+  resizeDirection.value = dir;
   isResizing.value = true;
   startX = e.clientX;
   startY = e.clientY;
@@ -400,6 +429,8 @@ function startResize(e: MouseEvent) {
     startWidth = 100;
     startHeight = 50;
   }
+  // 以本次缩放前的状态作为一次撤销点
+  store.commit();
   document.addEventListener("mousemove", onResizeMove);
   document.addEventListener("mouseup", onResizeEnd);
 }
@@ -408,16 +439,24 @@ function onResizeMove(e: MouseEvent) {
   if (!isResizing.value) return;
   const deltaX = e.clientX - startX;
   const deltaY = e.clientY - startY;
-  const newWidth = Math.max(50, startWidth + deltaX);
-  const newHeight = Math.max(30, startHeight + deltaY);
-  store.updateStyle(liveComponent.value.id, {
-    width: newWidth + "px",
-    height: newHeight + "px",
-  });
+  const dir = resizeDirection.value;
+  let newWidth = startWidth;
+  let newHeight = startHeight;
+  if (dir.includes("e")) newWidth = startWidth + deltaX;
+  if (dir.includes("w")) newWidth = startWidth - deltaX;
+  if (dir.includes("s")) newHeight = startHeight + deltaY;
+  if (dir.includes("n")) newHeight = startHeight - deltaY;
+  newWidth = Math.max(50, Math.round(newWidth));
+  newHeight = Math.max(30, Math.round(newHeight));
+  const patch: Record<string, string> = {};
+  if (dir.includes("e") || dir.includes("w")) patch.width = newWidth + "px";
+  if (dir.includes("n") || dir.includes("s")) patch.height = newHeight + "px";
+  store.updateStyleDirect(liveComponent.value.id, patch);
 }
 
 function onResizeEnd() {
   isResizing.value = false;
+  store.saveToLocal();
   document.removeEventListener("mousemove", onResizeMove);
   document.removeEventListener("mouseup", onResizeEnd);
 }
@@ -675,16 +714,20 @@ onBeforeUnmount(() => {
 }
 .resize-handle {
   position: absolute;
+  z-index: 30;
+  background: transparent;
+}
+
+/* 右下角手柄（原有视觉保持不变，供所有容器共用） */
+.resize-handle.rh-se {
   right: 0;
   bottom: 0;
   width: 16px;
   height: 16px;
   cursor: nwse-resize;
-  background: transparent;
-  z-index: 30;
 }
 
-.resize-handle::after {
+.resize-handle.rh-se::after {
   content: "";
   position: absolute;
   right: 3px;
@@ -693,5 +736,90 @@ onBeforeUnmount(() => {
   height: 8px;
   border-right: 2px solid #999;
   border-bottom: 2px solid #999;
+}
+
+/* 四边手柄：悬浮时高亮 */
+.resize-handle.rh-n {
+  top: -2px;
+  left: 0;
+  right: 0;
+  height: 5px;
+  cursor: ns-resize;
+}
+.resize-handle.rh-s {
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 5px;
+  cursor: ns-resize;
+}
+.resize-handle.rh-e {
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: ew-resize;
+}
+.resize-handle.rh-w {
+  left: -2px;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: ew-resize;
+}
+.resize-handle.rh-n:hover,
+.resize-handle.rh-s:hover,
+.resize-handle.rh-e:hover,
+.resize-handle.rh-w:hover {
+  background: rgba(64, 158, 255, 0.18);
+}
+
+/* 其余三角手柄 */
+.resize-handle.rh-ne,
+.resize-handle.rh-nw,
+.resize-handle.rh-sw {
+  width: 12px;
+  height: 12px;
+}
+.resize-handle.rh-ne {
+  top: -2px;
+  right: -2px;
+  cursor: nesw-resize;
+}
+.resize-handle.rh-nw {
+  top: -2px;
+  left: -2px;
+  cursor: nwse-resize;
+}
+.resize-handle.rh-sw {
+  bottom: -2px;
+  left: -2px;
+  cursor: nesw-resize;
+}
+.resize-handle.rh-ne::after,
+.resize-handle.rh-nw::after,
+.resize-handle.rh-sw::after {
+  content: "";
+  position: absolute;
+  width: 7px;
+  height: 7px;
+}
+.resize-handle.rh-ne::after {
+  top: 2px;
+  right: 2px;
+  border-top: 2px solid #999;
+  border-right: 2px solid #999;
+}
+.resize-handle.rh-nw::after {
+  top: 2px;
+  left: 2px;
+  border-top: 2px solid #999;
+  border-left: 2px solid #999;
+}
+.resize-handle.rh-sw::after {
+  bottom: 2px;
+  left: 2px;
+  border-bottom: 2px solid #999;
+  border-left: 2px solid #999;
 }
 </style>
